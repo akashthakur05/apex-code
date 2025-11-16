@@ -40,9 +40,7 @@ export default function Footer() {
           <p>MCQ Test Series Viewer - All Rights Reserved</p>
         </div>
         <div className="mt-6 pt-4 border-t border-border/50 text-center text-xs text-muted-foreground flex flex-col items-center gap-3">
-          <a href="https://www.free-counters.org/" target="_blank" rel="noopener noreferrer">
-            Free Web Counter by Free-Counters.org
-          </a>
+      
                  <div id="counter"></div>
 
         </div>
