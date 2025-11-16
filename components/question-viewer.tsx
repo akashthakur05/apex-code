@@ -209,10 +209,9 @@ export default function QuestionViewer({ test, coaching, preloadedQuestions }: P
 
   return (
     <div className="min-h-screen bg-background flex flex-col md:flex-row">
-      {/* Mobile Sidebar Toggle Button */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="fixed bottom-6 right-6 z-40 md:hidden w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg hover:bg-primary/90"
+        className="fixed top-4 left-4 z-50 md:hidden w-10 h-10 rounded-lg bg-primary text-primary-foreground flex items-center justify-center shadow-lg hover:bg-primary/90"
         aria-label={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
       >
         {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -222,7 +221,7 @@ export default function QuestionViewer({ test, coaching, preloadedQuestions }: P
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
 
-        <div className="h-full md:h-screen overflow-y-auto p-4 flex flex-col pt-16 md:pt-4">
+        <div className="h-full md:h-screen overflow-y-auto p-4 flex flex-col pt-20 md:pt-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-foreground">Questions ({questions.length})</h3>
             <button
@@ -317,16 +316,26 @@ export default function QuestionViewer({ test, coaching, preloadedQuestions }: P
               const sectionName = getSectionName(section)
               const isActive = section === currentSection
               return (
-                <div
+                <button
                   key={section}
-                  className={`px-4 py-3 font-medium whitespace-nowrap text-sm border-b-2 transition-colors ${
+                  onClick={() => {
+                    // Find first question in this section and navigate to it
+                    const sectionQuestions = groupedBySection.get(section) || []
+                    if (sectionQuestions.length > 0) {
+                      const firstQIndex = questions.indexOf(sectionQuestions[0])
+                      setCurrentIndex(firstQIndex)
+                      setSelectedOption(null)
+                      setShowSolution(false)
+                    }
+                  }}
+                  className={`px-4 py-3 font-medium whitespace-nowrap text-sm border-b-2 transition-colors cursor-pointer hover:text-foreground ${
                     isActive
                       ? 'border-primary text-primary'
-                      : 'border-transparent text-muted-foreground hover:text-foreground'
+                      : 'border-transparent text-muted-foreground'
                   }`}
                 >
                   {sectionName} ({sectionQCount})
-                </div>
+                </button>
               )
             })}
           </div>
@@ -428,25 +437,26 @@ export default function QuestionViewer({ test, coaching, preloadedQuestions }: P
               </button>
             </Card>
 
-            {/* Navigation */}
-            <div className="flex gap-3 justify-between mb-8">
-              <button
-                onClick={handlePrevQuestion}
-                disabled={currentIndex === 0}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-card border hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                <span className="hidden sm:inline">Previous</span>
-              </button>
+            <div className="fixed bottom-0 left-0 right-0 md:static border-t bg-card p-4 md:border-t-0 md:mb-8">
+              <div className="max-w-4xl mx-auto flex gap-3 justify-between">
+                <button
+                  onClick={handlePrevQuestion}
+                  disabled={currentIndex === 0}
+                  className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-card border hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  <span className="hidden sm:inline">Previous</span>
+                </button>
 
-              <button
-                onClick={handleNextQuestion}
-                disabled={currentIndex === questions.length - 1}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-card border hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <span className="hidden sm:inline">Next</span>
-                <ChevronRight className="w-4 h-4" />
-              </button>
+                <button
+                  onClick={handleNextQuestion}
+                  disabled={currentIndex === questions.length - 1}
+                  className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-card border hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <span className="hidden sm:inline">Next</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
