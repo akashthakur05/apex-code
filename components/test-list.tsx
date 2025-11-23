@@ -1,13 +1,30 @@
+'use client'
+
+import { useState, useEffect } from 'react'
 import { CoachingInstitute } from '@/lib/types'
 import Link from 'next/link'
 import { Card } from '@/components/ui/card'
-import { ChevronLeft } from 'lucide-react'
+import { ChevronLeft, CheckCircle } from 'lucide-react'
+import SectionFilter from './section-filter'
+import { isTestComplete } from '@/lib/bookmark-storage'
 
 interface Props {
   coaching: CoachingInstitute
 }
 
 export default function TestList({ coaching }: Props) {
+  const [completedTests, setCompletedTests] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    const completed = new Set<string>()
+    coaching.tests.forEach(test => {
+      if (isTestComplete(coaching.id, test.id)) {
+        completed.add(test.id)
+      }
+    })
+    setCompletedTests(completed)
+  }, [coaching.id, coaching.tests])
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -26,7 +43,9 @@ export default function TestList({ coaching }: Props) {
         </div>
       </div>
 
-      {/* Tests Grid */}
+      {/* Section Filter */}
+      <SectionFilter coachingId={coaching.id} />
+
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {coaching.tests.map((test) => (
@@ -34,7 +53,18 @@ export default function TestList({ coaching }: Props) {
               key={test.id}
               href={`/coaching/${coaching.id}/test/${test.id}`}
             >
-              <Card className="h-full cursor-pointer transition-all hover:shadow-lg hover:scale-105 p-6">
+              <Card className={`h-full cursor-pointer transition-all hover:shadow-lg hover:scale-105 p-6 relative ${
+                completedTests.has(test.id) 
+                  ? 'border-2 border-green-500 bg-green-50/50 dark:bg-green-950/20' 
+                  : ''
+              }`}>
+                {/* Completed indicator */}
+                {completedTests.has(test.id) && (
+                  <div className="absolute top-4 right-4 flex items-center gap-1 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                    <CheckCircle className="w-4 h-4" />
+                    Completed
+                  </div>
+                )}
                 <h2 className="text-xl font-bold text-foreground mb-4">
                   {test.title}
                 </h2>

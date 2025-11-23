@@ -86,6 +86,7 @@ export interface CoachingInstitute {
   tests: TestTitle[]
   repositry_url:string
   folder_name:string
+  sectionMap:{[key:string]:string}
 }
 
 

@@ -2,13 +2,14 @@
 
 import { TestTitle, CoachingInstitute, Question } from '@/lib/types'
 import Link from 'next/link'
-import { ChevronLeft, ChevronRight, Menu, X, Printer } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Menu, X, Printer, Share2, Bookmark } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import SolutionModal from './solution-modal'
 import HTMLRenderer from './html-renderer'
 import { getSectionName } from '@/lib/mock-data'
 import { useState, useEffect } from 'react'
-
+import { isBookmarked,addBookmark, removeBookmark, markTestComplete, unmarkTestComplete, isTestComplete as checkTestComplete } from '@/lib/bookmark-storage'
+// import { addBookmark, removeBookmark, isBookmarked, markTestComplete, unmarkTestComplete, isTestComplete as checkTestComplete } from '@/lib/bookmark-storage'
 
 interface Props {
   test: TestTitle
@@ -26,43 +27,10 @@ export default function QuestionViewer({ test, coaching, preloadedQuestions }: P
   const [lastScrollY, setLastScrollY] = useState(0)
   const [printModalOpen, setPrintModalOpen] = useState(false)
   const [selectedSections, setSelectedSections] = useState<string[]>([])
+  const [bookmarkedQuestions, setBookmarkedQuestions] = useState<Set<string>>(new Set())
+  const [showShareMenu, setShowShareMenu] = useState(false)
+  const [isTestComplete, setIsTestComplete] = useState(false)
 
-  if (questions.length === 0) {
-    return (
-      <div className="min-h-screen">
-        <div className="sticky top-0 z-10 border-b bg-card/95">
-          <div className="max-w-4xl mx-auto px-4 py-4">
-            <Link href={`/coaching/${coaching.id}`} className="inline-flex items-center gap-2 text-primary hover:underline mb-4">
-              <ChevronLeft className="w-4 h-4" />
-              Back to Tests
-            </Link>
-          </div>
-        </div>
-        <div className="flex items-center justify-center py-20">
-          <Card className="p-8 text-center max-w-md">
-            <p className="text-lg font-semibold text-foreground mb-2">
-              No questions available
-            </p>
-            <p className="text-muted-foreground">
-              This test may not have questions loaded yet
-            </p>
-          </Card>
-        </div>
-      </div>
-    )
-  }
-
-  // Group questions by section
-  const groupedBySection = new Map<string, Question[]>()
-  questions.forEach((q: Question) => {
-    const sectionId = q.section_id || 'general'
-    if (!groupedBySection.has(sectionId)) {
-      groupedBySection.set(sectionId, [])
-    }
-    groupedBySection.get(sectionId)!.push(q)
-  })
-
-  const sectionArray = Array.from(groupedBySection.keys())
   const currentQuestion = questions[currentIndex]
   const currentSection = currentQuestion.section_id || 'general'
 
@@ -83,6 +51,21 @@ export default function QuestionViewer({ test, coaching, preloadedQuestions }: P
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
   }, [lastScrollY])
+
+  useEffect(() => {
+    // Load bookmarks on mount
+    const bookmarks = new Set()
+    preloadedQuestions?.forEach(q => {
+      if (isBookmarked(q.id, coaching.id)) {
+        bookmarks.add(q.id)
+      }
+    })
+    setBookmarkedQuestions(bookmarks as any)
+  }, [preloadedQuestions, coaching.id])
+
+  useEffect(() => {
+    setIsTestComplete(checkTestComplete(coaching.id, test.id))
+  }, [coaching.id, test.id])
 
   const handleNextQuestion = () => {
     if (currentIndex < questions.length - 1) {
@@ -106,7 +89,7 @@ export default function QuestionViewer({ test, coaching, preloadedQuestions }: P
 
   const handlePrint = () => {
     if (selectedSections.length === 0) {
-      setSelectedSections(sectionArray)
+      setSelectedSections(Array.from(groupedBySection.keys()))
     }
     setPrintModalOpen(true)
   }
@@ -206,6 +189,63 @@ export default function QuestionViewer({ test, coaching, preloadedQuestions }: P
         : [...prev, sectionId]
     )
   }
+
+  const handleBookmark = () => {
+    const isCurrentlyBookmarked = bookmarkedQuestions.has(currentQuestion.id)
+    
+    if (isCurrentlyBookmarked) {
+      removeBookmark(currentQuestion.id, coaching.id)
+      setBookmarkedQuestions(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(currentQuestion.id)
+        return newSet
+      })
+    } else {
+      addBookmark(currentQuestion, coaching.id, test.id)
+      setBookmarkedQuestions(prev => new Set(prev).add(currentQuestion.id))
+    }
+  }
+
+  const handleShare = () => {
+    const shareText = `${currentQuestion.question}\n\nA) ${currentQuestion.option_1}\nB) ${currentQuestion.option_2}\nC) ${currentQuestion.option_3}\nD) ${currentQuestion.option_4}`
+    
+    if (navigator.share) {
+      navigator.share({
+        title: test.title,
+        text: shareText,
+      })
+    } else {
+      navigator.clipboard.writeText(shareText)
+      alert('Question copied to clipboard!')
+    }
+    setShowShareMenu(false)
+  }
+
+  const handleCompleteTest = () => {
+    if (isTestComplete) {
+      // Unmark complete
+      unmarkTestComplete(coaching.id, test.id)
+      setIsTestComplete(false)
+      alert('Test marked as incomplete!')
+    } else {
+      // Mark complete
+      markTestComplete(coaching.id, test.id)
+      setIsTestComplete(true)
+      alert('Test marked as complete!')
+    }
+  }
+
+  // Group questions by section
+  const groupedBySection = new Map<string, Question[]>()
+  questions.forEach((q: Question) => {
+    const sectionId = q.section_id || 'general'
+    if (!groupedBySection.has(sectionId)) {
+      groupedBySection.set(sectionId, [])
+    }
+    groupedBySection.get(sectionId)!.push(q)
+  })
+
+  const sectionArray = Array.from(groupedBySection.keys())
 
   return (
     <div className="min-h-screen bg-background flex flex-col md:flex-row">
@@ -437,27 +477,58 @@ export default function QuestionViewer({ test, coaching, preloadedQuestions }: P
               </button>
             </Card>
 
-            <div className="fixed bottom-0 left-0 right-0 md:static border-t bg-card p-4 md:border-t-0 md:mb-8">
-              <div className="max-w-4xl mx-auto flex gap-3 justify-between">
+            {/* Bookmark and Share Buttons */}
+            <div className="flex justify-between items-start mb-6">
+              <div className="flex-1">
+                {/* existing question content */}
+              </div>
+              <div className="flex gap-2 ml-4">
                 <button
-                  onClick={handlePrevQuestion}
-                  disabled={currentIndex === 0}
-                  className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-card border hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  onClick={handleBookmark}
+                  className={`p-2 rounded-lg transition-colors ${
+                    bookmarkedQuestions.has(currentQuestion.id)
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted text-foreground hover:bg-muted/80'
+                  }`}
+                  title="Bookmark question"
                 >
-                  <ChevronLeft className="w-4 h-4" />
-                  <span className="hidden sm:inline">Previous</span>
+                  <Bookmark className="w-5 h-5" fill={bookmarkedQuestions.has(currentQuestion.id) ? 'currentColor' : 'none'} />
                 </button>
 
-                <button
-                  onClick={handleNextQuestion}
-                  disabled={currentIndex === questions.length - 1}
-                  className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-card border hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  <span className="hidden sm:inline">Next</span>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
+                <div className="relative">
+                  <button
+                    onClick={() => setShowShareMenu(!showShareMenu)}
+                    className="p-2 rounded-lg bg-muted text-foreground hover:bg-muted/80 transition-colors"
+                    title="Share question"
+                  >
+                    <Share2 className="w-5 h-5" />
+                  </button>
+
+                  {showShareMenu && (
+                    <div className="absolute right-0 top-full mt-2 bg-card border rounded-lg shadow-lg z-50">
+                      <button
+                        onClick={handleShare}
+                        className="w-full px-4 py-2 text-left text-sm hover:bg-muted transition-colors"
+                      >
+                        Share/Copy
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
+
+            {/* Complete Test Button - Toggle */}
+            <button
+              onClick={handleCompleteTest}
+              className={`w-full px-4 py-2 rounded-lg font-medium transition-colors ${
+                isTestComplete
+                  ? 'bg-green-500 text-white hover:bg-green-600'
+                  : 'bg-secondary text-secondary-foreground hover:bg-secondary/90'
+              }`}
+            >
+              {isTestComplete ? 'Unmark Test as Complete' : 'Mark Test as Complete'}
+            </button>
           </div>
         </div>
       </div>

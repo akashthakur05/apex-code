@@ -1,6 +1,6 @@
 import TestList from '@/components/test-list'
 import { coachingInstitutes } from '@/lib/mock-data'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 
 interface Props {
   params: Promise<{ coachingId: string }>
@@ -24,10 +24,11 @@ export async function generateMetadata({ params }: Props) {
 
 export default async function CoachingPage({ params }: Props) {
   const { coachingId } = await params
-  const coaching = coachingInstitutes.find(c => c.id === coachingId)
+  const coaching = coachingInstitutes.find(c => +c.id === +coachingId)
 
-  if (!coaching) {
-    notFound()
+  if (!coaching||!coachingId) {
+    console.log(coaching,coachingId)
+    redirect('/')
   }
 
   return (
