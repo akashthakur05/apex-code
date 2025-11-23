@@ -8,6 +8,7 @@ import SolutionModal from './solution-modal'
 import HTMLRenderer from './html-renderer'
 import { getSectionName } from '@/lib/mock-data'
 import { useState, useEffect } from 'react'
+import * as htmlToImage from "html-to-image"
 import { isBookmarked, addBookmark, removeBookmark, markTestComplete, unmarkTestComplete, isTestComplete as checkTestComplete } from '@/lib/bookmark-storage'
 // import { addBookmark, removeBookmark, isBookmarked, markTestComplete, unmarkTestComplete, isTestComplete as checkTestComplete } from '@/lib/bookmark-storage'
 
@@ -205,6 +206,181 @@ export default function QuestionViewer({ test, coaching, preloadedQuestions }: P
       setBookmarkedQuestions(prev => new Set(prev).add(currentQuestion.id))
     }
   }
+
+
+
+// const handleShareHybrid = async () => {
+//   const element = document.getElementById("question-card")
+//   if (!element) return
+
+//   try {
+//     // Convert DOM → PNG
+//     const dataUrl = await htmlToImage.toPng(element, { quality: 1 })
+
+//     const response = await fetch(dataUrl)
+//     const blob = await response.blob()
+//     const file = new File([blob], "question.png", { type: "image/png" })
+
+//     const pageUrl = window.location.href
+
+//     // Extract plain text from HTML question
+//     const div = document.createElement("div")
+//     div.innerHTML = currentQuestion.question
+//     const cleanQuestion = div.innerText
+
+//     const fallbackText = `
+// ${cleanQuestion}
+
+// A) ${currentQuestion.option_1}
+// B) ${currentQuestion.option_2}
+// C) ${currentQuestion.option_3}
+// D) ${currentQuestion.option_4}
+
+// ${pageUrl}
+//     `.trim()
+
+//     // -----------------------------------------------------
+//     // 1️⃣ TRY DIRECT IMAGE SHARE (ANDROID ONLY)
+//     // -----------------------------------------------------
+//     if (
+//       navigator.share &&
+//       navigator.canShare &&
+//       navigator.canShare({ files: [file] })
+//     ) {
+//       try {
+//         await navigator.share({
+//           title: test.title,
+//           text: "Check this question:",
+//           files: [file],
+//         })
+//         return
+//       } catch (err) {
+//         console.warn("Direct image share failed, using fallback...")
+//       }
+//     }
+
+//     // -----------------------------------------------------
+//     // 2️⃣ OPEN WHATSAPP WITH TEXT + AUTOMATIC URL ENCODE
+//     // (Works on ALL Devices: Android, iOS, Desktop)
+//     // -----------------------------------------------------
+
+//     const whatsappMessage = encodeURIComponent(fallbackText)
+//     const waLink = `https://wa.me/?text=${whatsappMessage}`
+
+//     // Open whatsapp in new tab
+//     window.open(waLink, "_blank")
+
+//     // Also auto-download image so user can attach it manually
+//     const link = document.createElement("a")
+//     link.href = dataUrl
+//     link.download = "question.png"
+//     link.click()
+
+//     return
+
+//   } catch (error) {
+//     console.error("Hybrid share failed:", error)
+//     alert("Unable to generate share preview.")
+//   }
+// }
+
+
+const handleShareImage = async () => {
+  const element = document.getElementById("question-card")
+  if (!element) return
+
+  try {
+    // Convert DOM → PNG
+    const dataUrl = await htmlToImage.toPng(element, { quality: 1 })
+
+    const response = await fetch(dataUrl)
+    const blob = await response.blob()
+    const file = new File([blob], "question.png", { type: "image/png" })
+
+    // Check if Web Share API supports files
+    if (navigator.share && navigator.canShare?.({ files: [file] })) {
+      await navigator.share({
+        files: [file],
+        title: test.title,
+        text: "Check this question:",
+      })
+    } else {
+      // Fallback: Download image
+      const link = document.createElement("a")
+      link.href = dataUrl
+      link.download = "question.png"
+      link.click()
+      alert("Image downloaded — share it on WhatsApp.")
+    }
+
+  } catch (error) {
+    console.error("Error sharing image:", error)
+    alert("Failed to generate image")
+  }
+}
+
+const handleShareHybrid = async () => {
+  const element = document.getElementById("question-card")
+  if (!element) return
+
+  const pageUrl = window.location.href
+
+  // Convert HTML → text
+  const div = document.createElement("div")
+  div.innerHTML = currentQuestion.question
+  const cleanQuestion = div.innerText.trim()
+
+  const fallbackText = `
+${cleanQuestion}
+
+A) ${currentQuestion.option_1}
+B) ${currentQuestion.option_2}
+C) ${currentQuestion.option_3}
+D) ${currentQuestion.option_4}
+
+${pageUrl}
+  `.trim()
+
+  try {
+    const dataUrl = await htmlToImage.toPng(element, { quality: 1 })
+    const blob = await (await fetch(dataUrl)).blob()
+    const file = new File([blob], "question.png", { type: "image/png" })
+
+    // --------------------------------------------------
+    // 1️⃣ **FORCE TRY IMAGE SHARE EVEN IF canShare() FAILS**
+    // --------------------------------------------------
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: test.title,
+          text: "Check this question:",
+          files: [file] // force try
+        })
+        return // SUCCESS → Image shared!
+      } catch (err) {
+        console.warn("Image share failed → fallback")
+      }
+    }
+
+    // --------------------------------------------------
+    // 2️⃣ OPEN WHATSAPP WITH TEXT ONLY (always works)
+    // --------------------------------------------------
+    const waLink = `https://wa.me/?text=${encodeURIComponent(fallbackText)}`
+    window.open(waLink, "_blank")
+
+    // --------------------------------------------------
+    // 3️⃣ DOWNLOAD IMAGE so user can attach it
+    // --------------------------------------------------
+    const link = document.createElement("a")
+    link.href = dataUrl
+    link.download = "question.png"
+    link.click()
+
+  } catch (e) {
+    console.error("Share hybrid error", e)
+    alert("Share failed.")
+  }
+}
 
 const handleShare = () => {
   const pageUrl = window.location.href
@@ -413,7 +589,7 @@ const handleShare = () => {
             </div>
 
             {/* Question Card */}
-            <Card className="p-6 md:p-8 mb-8">
+            <Card id='question-card' className="p-6 md:p-8 mb-8">
               {/* Question Text */}
               <div className="mb-8">
                 <div className="flex gap-4">
@@ -544,10 +720,10 @@ const handleShare = () => {
                   {showShareMenu && (
                     <div className="absolute right-0 top-full mt-2 bg-card border rounded-lg shadow-lg z-50">
                       <button
-                        onClick={handleShare}
+                        onClick={handleShareImage}
                         className="w-full px-4 py-2 text-left text-sm hover:bg-muted transition-colors"
                       >
-                        Share/Copy
+                        Share  
                       </button>
                     </div>
                   )}
