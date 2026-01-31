@@ -180,7 +180,7 @@ async function updateDataJson(source, tests) {
     institute = {
       id: String(data.length + 1),
       name: source.name,
-      logo: "",
+      logo: source.logo || "",
       test_series_id: String(source.test_series_id ?? ""),
       repository_url: "",
       folder_name: source.folder_name,
@@ -205,7 +205,7 @@ async function updateDataJson(source, tests) {
 
 async function run() {
   const sources = JSON.parse(await read(SOURCES_PATH));
-  for (const s of sources) await processSource(s);
+  for (const s of sources) if (s.enabled) await processSource(s);
   log("DONE", "All sources processed");
 }
 
