@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { coachingInstitutes } from "@/lib/mock-data";
+import data from "@/lib/data.json";
 import { Card } from "@/components/ui/card";
 
 interface Props {
@@ -10,32 +9,23 @@ interface Props {
 }
 
 export default function SectionFilter({ coachingId }: Props) {
-  const [sections, setSections] = useState<
-    { id: string; name: string; count: number }[]
-  >([]);
+  // 1. Find coaching institute
+  const institute = data.find(
+    (ci) => String(ci.id) === String(coachingId)
+  );
 
-  useEffect(() => {
-    // 1. Find coaching institute
-    const institute = coachingInstitutes.find(
-      (ci) => Number(ci.id) === Number(coachingId)
-    );
-    if (!institute) return;
+  if (!institute || !institute.sectionMap) {
+    return null;
+  }
 
-    // 2. Extract sectionMap (object)
-    const sectionMapObj = institute.sectionMap ?? {};
-
-    // 3. Convert object → sorted array
-    const list = Object.entries(sectionMapObj)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([id, name]) => ({
-        id,
-        name,
-        count: 1500, // default 0
-      }));
-
-    // 4. Update state
-    setSections(list);
-  }, [coachingId]);
+  // 2. Convert sectionMap → sorted array
+  const sections = Object.entries(institute.sectionMap)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([id, name]) => ({
+      id,
+      name: String(name),
+      count: 1500, // placeholder
+    }));
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 border-t">

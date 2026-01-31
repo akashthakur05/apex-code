@@ -2,31 +2,43 @@
     {
         "name": "RWAUPSI",
         "folder_name": "RWAUPSI",
-        "logo":"/rwa.jpeg",
+        "logo": "/rwa.jpeg",
         "url": "https://rozgarapinew.teachx.in/get/test_titlev2?testseriesid=407&subject_id=-1&userid=-1&search=&start=-1",
         "headers": {
             "auth-key": "appxapi",
             "authorization": "TOKEN",
             "source": "website"
         },
-        "enabled": true
+        "enabled": true,
+        "sectionMap": {
+            "215": "Basic Law/Constitution/General Knowledge",
+            "213": "Hindi",
+            "222": "Numerical & Mental Ability Test",
+            "223": "Mental Aptitude/Intelligence/Reasoning"
+        }
     },
     {
         "name": "TWAUPSI",
         "folder_name": "TWAUPSI",
-        "logo":"/TWA.webp",
+        "logo": "/TWA.webp",
         "url": "https://targetwithankitapi.akamai.net.in/get/test_titlev2?testseriesid=36&subject_id=-1&userid=662472&search=&start=-1",
         "headers": {
             "auth-key": "appxapi",
             "authorization": "TOKEN",
             "source": "website"
         },
-        "enabled": true
+        "enabled": true,
+        "sectionMap": {
+            "233": "Maths",
+            "238": "Basic Law/GK-GS/Constitution",
+            "208": "Hindi",
+            "206": "Mental Reasoning and Intelligence"
+        }
     },
     {
         "name": "SUPER100",
         "folder_name": "SUPER100",
-        "logo":"/super100.webp",
+        "logo": "/super100.webp",
         "url": "https://super100adityasinghapi.akamai.net.in/get/test_titlev2?testseriesid=18&subject_id=-1&userid=-1&search=&start=-1",
         "headers": {
             "auth-key": "appxapi",
@@ -38,25 +50,37 @@
     {
         "name": "MUKULUPSI",
         "folder_name": "MUKULUPSI",
-        "logo":"/mohitgurukul.jpg",
+        "logo": "/mohitgurukul.jpg",
         "url": "https://mohitsirgurukulapi.akamai.net.in/get/test_titlev2?testseriesid=4&subject_id=-1&userid=7717&search=&start=-1",
         "headers": {
             "auth-key": "appxapi",
             "authorization": "TOKEN",
             "source": "website"
         },
-        "enabled": true
+        "enabled": true,
+        "sectionMap": {
+            "2": "Basic Law/Constitution/General Knowledge",
+            "5": "Hindi",
+            "1": "Numerical & Mental Ability Test",
+            "3": "Mental Aptitude/Intelligence/Reasoning"
+        }   
     },
     {
         "name": "RWAUPSIPAIDFULL",
         "folder_name": "RWAUPSIPAIDFULL",
-        "logo":"/rwa.jpeg",
+        "logo": "/rwa.jpeg",
         "url": "https://rozgarapinew.teachx.in/get/test_titlev2?testseriesid=542&subject_id=1415&userid=1010983&search=&start=-1",
         "headers": {
             "auth-key": "appxapi",
             "authorization": "TOKEN",
             "source": "website"
         },
-        "enabled": true
+        "enabled": true,
+           "sectionMap": {
+            "215": "Basic Law/Constitution/General Knowledge",
+            "213": "Hindi",
+            "222": "Numerical & Mental Ability Test",
+            "223": "Mental Aptitude/Intelligence/Reasoning"
+        }
     }
 ]

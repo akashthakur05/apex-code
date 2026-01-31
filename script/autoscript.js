@@ -184,7 +184,7 @@ async function updateDataJson(source, tests) {
       test_series_id: String(source.test_series_id ?? ""),
       repository_url: "",
       folder_name: source.folder_name,
-      sectionMap: {},
+      sectionMap: source.sectionMap || {},
       tests: []
     };
     data.push(institute);
