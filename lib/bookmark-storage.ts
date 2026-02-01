@@ -108,3 +108,70 @@ export function getCompletedTests(): string[] {
 export function isTestComplete(coachingId: string, testId: string): boolean {
   return getCompletedTests().includes(`${coachingId}-${testId}`)
 }
+
+// Section completion tracking
+const SECTION_COMPLETION_KEY = 'section_completion'
+
+export interface SectionCompletion {
+  coachingId: string
+  testId: string
+  sectionId: string
+  isCompleted: boolean
+}
+
+export function getSectionCompletion(): SectionCompletion[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const stored = localStorage.getItem(SECTION_COMPLETION_KEY)
+    return stored ? JSON.parse(stored) : []
+  } catch {
+    return []
+  }
+}
+
+export function toggleSectionCompletion(coachingId: string, testId: string, sectionId: string): void {
+  if (typeof window === 'undefined') return
+  try {
+    const completions = getSectionCompletion()
+    const key = `${coachingId}-${testId}-${sectionId}`
+    const existing = completions.find(c => `${c.coachingId}-${c.testId}-${c.sectionId}` === key)
+    
+    if (existing) {
+      existing.isCompleted = !existing.isCompleted
+    } else {
+      completions.push({
+        coachingId,
+        testId,
+        sectionId,
+        isCompleted: true,
+      })
+    }
+    localStorage.setItem(SECTION_COMPLETION_KEY, JSON.stringify(completions))
+  } catch (e) {
+    console.error('Error toggling section completion:', e)
+  }
+}
+
+export function isSectionCompleted(coachingId: string, testId: string, sectionId: string): boolean {
+  const completions = getSectionCompletion()
+  const completion = completions.find(
+    c => c.coachingId === coachingId && c.testId === testId && c.sectionId === sectionId
+  )
+  return completion?.isCompleted ?? false
+}
+
+export function getTestSectionProgress(coachingId: string, testId: string, totalSections: number): { completed: number; total: number; percentage: number } {
+  const completions = getSectionCompletion()
+  const completedCount = completions.filter(
+    c => c.coachingId === coachingId && c.testId === testId && c.isCompleted
+  ).length
+  
+  const total = totalSections > 0 ? totalSections : 1
+  const percentage = Math.round((completedCount / total) * 100)
+  
+  return {
+    completed: completedCount,
+    total,
+    percentage,
+  }
+}
