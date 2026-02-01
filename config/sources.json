@@ -82,5 +82,23 @@
             "222": "Numerical & Mental Ability Test",
             "223": "Mental Aptitude/Intelligence/Reasoning"
         }
+    },
+     {
+        "name": "SUPERCLIMAX",
+        "folder_name": "SUPERCLIMAX",
+        "logo": "/superclimax.jpeg",
+        "url": "https://superclimaxacademyapi.classx.co.in/get/test_titlev2?testseriesid=67&subject_id=-1&userid=-1&search=&start=-1",
+        "headers": {
+            "auth-key": "appxapi",
+            "authorization": "TOKEN",
+            "source": "website"
+        },
+        "enabled": true,
+           "sectionMap": {
+            "217": "MATHS",
+            "280": "Reasoning",
+            "214": "GK/GS",
+            "215": "Hindi"
+        }
     }
 ]
