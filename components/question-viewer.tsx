@@ -19,6 +19,7 @@ interface Props {
 }
 
 export default function QuestionViewer({ test, coaching, preloadedQuestions }: Props) {
+  console.log('Preloaded Questions:', preloadedQuestions, coaching)
   const questions = preloadedQuestions || []
   const [currentIndex, setCurrentIndex] = useState(0)
   const [selectedOption, setSelectedOption] = useState<number | null>(null)
@@ -151,7 +152,7 @@ export default function QuestionViewer({ test, coaching, preloadedQuestions }: P
     })
 
     Array.from(printGroupedBySection.entries()).forEach(([sectionId, sectionQuestions]) => {
-      html += `<div class="section-title">${getSectionName(sectionId)}</div>`
+      html += `<div class="section-title">${coaching.sectionMap[sectionId] || sectionId}</div>`
 
       sectionQuestions.forEach((q, idx) => {
         html += `
@@ -474,7 +475,7 @@ ${pageUrl}
           <div className="flex-1 mb-4 space-y-4 overflow-y-auto">
             {sectionArray.map((section) => {
               const sectionQuestions = groupedBySection.get(section) || []
-              const sectionName = getSectionName(section)
+              const sectionName = coaching.sectionMap[section] || section
 
               return (
                 <div key={section}>
@@ -548,7 +549,7 @@ ${pageUrl}
           <div className="max-w-4xl mx-auto px-4 flex gap-2">
             {sectionArray.map((section) => {
               const sectionQCount = groupedBySection.get(section)?.length || 0
-              const sectionName = getSectionName(section)
+              const sectionName = coaching.sectionMap[section] || section
               const isActive = section === currentSection
               return (
                 <button
@@ -584,7 +585,7 @@ ${pageUrl}
                 Question {currentIndex + 1} of {questions.length}
               </span>
               <span className="font-medium text-foreground">
-                {getSectionName(currentSection)}
+                {coaching.sectionMap[currentSection] || currentSection}
               </span>
               <div>
                 <div className="hidden md:flex justify-between mt-4">
@@ -792,7 +793,7 @@ ${pageUrl}
                     className="w-4 h-4"
                   />
                   <span className="text-foreground">
-                    {getSectionName(section)} ({groupedBySection.get(section)?.length || 0} questions)
+                    {coaching.sectionMap[section] || section} ({groupedBySection.get(section)?.length || 0} questions)
                   </span>
                 </label>
               ))}
