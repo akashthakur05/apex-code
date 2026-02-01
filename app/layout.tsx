@@ -4,6 +4,8 @@ import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 import Footer from '@/components/footer-home';
 import CoachingList from '@/components/coaching-list'
+import { LoadingProvider } from '@/lib/loading-context'
+import { LoadingIndicator } from '@/components/loading-indicator'
 import 'katex/dist/katex.min.css';
 
 
@@ -50,13 +52,16 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`font-sans antialiased`}>
-        <div className="flex flex-col min-h-screen">
-          <main className="flex-1">
-            {children}
-          </main>
-          <Footer />
-        </div>
-        <Analytics />
+        <LoadingProvider>
+          <div className="flex flex-col min-h-screen">
+            <main className="flex-1">
+              {children}
+            </main>
+            <Footer />
+          </div>
+          <LoadingIndicator />
+          <Analytics />
+        </LoadingProvider>
       </body>
     </html>
   )
