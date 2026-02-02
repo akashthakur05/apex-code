@@ -48,23 +48,29 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
     router.push(`?${params.toString()}`)
   }
 
-  const handleNext = () => {
-    if (currentIndex < totalQuestions - 1) {
-      const newIndex = currentIndex + 1
-      setCurrentIndex(newIndex)
-      setSelectedOption(null)
-      updateUrl(newIndex)
-    }
+const handleNext = () => {
+  setCurrentIndex(prev => Math.min(prev + 1, totalQuestions - 1))
+  setSelectedOption(null)
+}
+
+const handlePrev = () => {
+  setCurrentIndex(prev => Math.max(prev - 1, 0))
+  setSelectedOption(null)
+}
+useEffect(() => {
+  updateUrl(currentIndex)
+}, [currentIndex])
+
+useEffect(() => {
+  const handler = (e: KeyboardEvent) => {
+    if (["n", "N", "ArrowRight"].includes(e.key)) handleNext()
+    if (["p", "P", "ArrowLeft"].includes(e.key)) handlePrev()
   }
 
-  const handlePrev = () => {
-    if (currentIndex > 0) {
-      const newIndex = currentIndex - 1
-      setCurrentIndex(newIndex)
-      setSelectedOption(null)
-      updateUrl(newIndex)
-    }
-  }
+  window.addEventListener("keydown", handler)
+  return () => window.removeEventListener("keydown", handler)
+}, [])
+
 
   const handleOptionClick = (opt: number) => {
     if (selectedOption === null) {

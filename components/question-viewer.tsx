@@ -69,6 +69,22 @@ export default function QuestionViewer({ test, coaching, preloadedQuestions }: P
     setIsTestComplete(checkTestComplete(coaching.id, test.id))
   }, [coaching.id, test.id])
 
+  useEffect(() => {
+    console.log('Setting up keydown listener')
+  const handler = (e: { key: string }) => {
+    console.log('Key pressed:', e.key)
+    if (e.key === "n" || e.key === "ArrowRight" || e.key === "N") {
+      handleNextQuestion()
+    }
+    if (e.key === "p" || e.key === "ArrowLeft" || e.key === "P") {
+      handlePrevQuestion()
+    }
+  };
+
+  window.addEventListener("keydown", handler);
+  return () => window.removeEventListener("keydown", handler);
+}, []);
+
   const handleNextQuestion = () => {
     if (currentIndex < questions.length - 1) {
       setCurrentIndex(currentIndex + 1)
