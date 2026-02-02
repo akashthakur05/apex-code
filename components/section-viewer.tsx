@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { sectionNameMap, coachingInstitutes } from '@/lib/mock-data'
-import { ChevronLeft, ChevronRight, Lightbulb } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Lightbulb, Settings } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import HTMLRenderer from './html-renderer'
@@ -15,6 +15,20 @@ interface Props {
   sectionId: string
   questionlist: any[]
 }
+
+interface QuickModeConfig {
+  enabled: boolean
+  autoNextEnabled: boolean
+  autoNextDelay: number // in milliseconds
+  soundEnabled: boolean
+  vibrationEnabled: boolean
+}
+
+interface SessionScore {
+  correct: number
+  incorrect: number
+}
+
 const keyToOption = (key: string): number | null => {
   switch (key.toLowerCase()) {
     case 'a':
@@ -34,6 +48,38 @@ const keyToOption = (key: string): number | null => {
   }
 }
 
+const playSound = (type: 'correct' | 'incorrect') => {
+  // Create audio context for sound feedback
+  const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+  const oscillator = audioContext.createOscillator()
+  const gainNode = audioContext.createGain()
+  
+  oscillator.connect(gainNode)
+  gainNode.connect(audioContext.destination)
+  
+  if (type === 'correct') {
+    oscillator.frequency.setValueAtTime(600, audioContext.currentTime)
+    oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 0.1)
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime)
+    gainNode.gain.setValueAtTime(0, audioContext.currentTime + 0.15)
+    oscillator.start(audioContext.currentTime)
+    oscillator.stop(audioContext.currentTime + 0.15)
+  } else {
+    oscillator.frequency.setValueAtTime(200, audioContext.currentTime)
+    oscillator.frequency.setValueAtTime(150, audioContext.currentTime + 0.1)
+    gainNode.gain.setValueAtTime(0.2, audioContext.currentTime)
+    gainNode.gain.setValueAtTime(0, audioContext.currentTime + 0.2)
+    oscillator.start(audioContext.currentTime)
+    oscillator.stop(audioContext.currentTime + 0.2)
+  }
+}
+
+const triggerVibration = (pattern: number | number[]) => {
+  if ('vibrate' in navigator) {
+    navigator.vibrate(pattern)
+  }
+}
+
 export default function SectionViewer({ coachingId, sectionId, questionlist }: Props) {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -41,6 +87,18 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
   const [selectedOption, setSelectedOption] = useState<number | null>(null)
   const [showSolution, setShowSolution] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [quickModeConfig, setQuickModeConfig] = useState<QuickModeConfig>({
+    enabled: false,
+    autoNextEnabled: true,
+    autoNextDelay: 1500,
+    soundEnabled: true,
+    vibrationEnabled: true,
+  })
+  const [sessionScore, setSessionScore] = useState<SessionScore>({
+    correct: 0,
+    incorrect: 0,
+  })
+  const [showQuickModeSettings, setShowQuickModeSettings] = useState(false)
 
   // Initialize question from query parameter on mount
   useEffect(() => {
@@ -76,15 +134,46 @@ const handlePrev = () => {
   setCurrentIndex(prev => Math.max(prev - 1, 0))
   setSelectedOption(null)
 }
+
 useEffect(() => {
   updateUrl(currentIndex)
 }, [currentIndex])
+
+// Auto-next effect for quick mode
+useEffect(() => {
+  if (!quickModeConfig.enabled || !quickModeConfig.autoNextEnabled || selectedOption === null) {
+    return
+  }
+
+  const timer = setTimeout(() => {
+    handleNext()
+  }, quickModeConfig.autoNextDelay)
+
+  return () => clearTimeout(timer)
+}, [selectedOption, quickModeConfig.enabled, quickModeConfig.autoNextEnabled, quickModeConfig.autoNextDelay, currentIndex, totalQuestions])
 
 
 
   const handleOptionClick = (opt: number) => {
     if (selectedOption === null) {
       setSelectedOption(opt)
+      
+      // Update score in quick mode
+      if (quickModeConfig.enabled) {
+        const isCorrect = currentQuestion.answer === String(opt)
+        setSessionScore(prev => ({
+          correct: prev.correct + (isCorrect ? 1 : 0),
+          incorrect: prev.incorrect + (isCorrect ? 0 : 1),
+        }))
+
+        // Provide feedback
+        if (quickModeConfig.soundEnabled) {
+          playSound(isCorrect ? 'correct' : 'incorrect')
+        }
+        if (quickModeConfig.vibrationEnabled) {
+          triggerVibration(isCorrect ? 100 : [100, 50, 100])
+        }
+      }
     }
   }
   useExamKeyboard({
@@ -107,35 +196,128 @@ useEffect(() => {
             Back to {coaching?.name} Tests
           </Link>
 
-          <h1 className="text-2xl font-bold">{sectionName}</h1>
-
-          <div className="flex justify-between text-sm text-muted-foreground mt-1">
-            <span>
-              Question {currentIndex + 1} / {totalQuestions}
-            </span>
-            <span>{coaching?.name}</span>
+          <div className="flex items-center justify-between gap-4 mb-3">
+            <div>
+              <h1 className="text-2xl font-bold">{sectionName}</h1>
+              <div className="flex justify-between text-sm text-muted-foreground mt-1">
+                <span>
+                  Question {currentIndex + 1} / {totalQuestions}
+                </span>
+                <span>{coaching?.name}</span>
+              </div>
+            </div>
+            
+            {/* Quick Mode Toggle */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setQuickModeConfig(prev => ({ ...prev, enabled: !prev.enabled }))}
+                className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${
+                  quickModeConfig.enabled ? 'bg-primary' : 'bg-muted'
+                }`}
+                aria-label="Toggle quick mode"
+              >
+                <span
+                  className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
+                    quickModeConfig.enabled ? 'translate-x-7' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+              <span className="text-sm font-medium whitespace-nowrap">Quick Mode</span>
+              {quickModeConfig.enabled && (
+                <button
+                  onClick={() => setShowQuickModeSettings(!showQuickModeSettings)}
+                  className="p-1.5 rounded-lg bg-muted hover:bg-muted/80"
+                  aria-label="Quick mode settings"
+                >
+                  <Settings className="w-4 h-4" />
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* TOP NAV (DESKTOP) */}
-          <div className="hidden md:flex justify-between mt-4">
-            <button
-              onClick={handlePrev}
-              disabled={currentIndex === 0}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg border bg-card hover:bg-muted disabled:opacity-50"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              Previous
-            </button>
+          {/* Quick Mode Settings Panel */}
+          {quickModeConfig.enabled && showQuickModeSettings && (
+            <div className="mt-4 p-4 rounded-lg bg-muted border border-border space-y-4">
+              <h3 className="font-semibold text-sm">Quick Mode Settings</h3>
+              
+              <div className="space-y-3">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={quickModeConfig.autoNextEnabled}
+                    onChange={(e) => setQuickModeConfig(prev => ({
+                      ...prev,
+                      autoNextEnabled: e.target.checked
+                    }))}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm">Auto-next after selection</span>
+                </label>
 
-            <button
-              onClick={handleNext}
-              disabled={currentIndex === totalQuestions - 1}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg border bg-card hover:bg-muted disabled:opacity-50"
-            >
-              Next
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
+                {quickModeConfig.autoNextEnabled && (
+                  <div className="ml-7 flex items-center gap-3">
+                    <label className="text-sm text-muted-foreground">Delay:</label>
+                    <input
+                      type="range"
+                      min="500"
+                      max="3000"
+                      step="250"
+                      value={quickModeConfig.autoNextDelay}
+                      onChange={(e) => setQuickModeConfig(prev => ({
+                        ...prev,
+                        autoNextDelay: parseInt(e.target.value)
+                      }))}
+                      className="flex-1 max-w-xs"
+                    />
+                    <span className="text-sm text-muted-foreground min-w-fit">
+                      {quickModeConfig.autoNextDelay}ms
+                    </span>
+                  </div>
+                )}
+
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={quickModeConfig.soundEnabled}
+                    onChange={(e) => setQuickModeConfig(prev => ({
+                      ...prev,
+                      soundEnabled: e.target.checked
+                    }))}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm">🔊 Sound feedback</span>
+                </label>
+
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={quickModeConfig.vibrationEnabled}
+                    onChange={(e) => setQuickModeConfig(prev => ({
+                      ...prev,
+                      vibrationEnabled: e.target.checked
+                    }))}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm">📳 Vibration feedback</span>
+                </label>
+              </div>
+            </div>
+          )}
+
+          {/* Score Display in Quick Mode */}
+          {quickModeConfig.enabled && (
+            <div className="mt-4 flex gap-4 text-sm">
+              <div className="px-3 py-1.5 rounded-lg bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300 font-medium">
+                ✓ Correct: {sessionScore.correct}
+              </div>
+              <div className="px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 font-medium">
+                ✗ Incorrect: {sessionScore.incorrect}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
         </div>
       </div>
 
