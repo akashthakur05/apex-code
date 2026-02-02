@@ -2,13 +2,14 @@
 
 import Link from "next/link"
 import { sectionNameMap, coachingInstitutes } from '@/lib/mock-data'
-import { ChevronLeft, ChevronRight, Lightbulb, Settings } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { ChevronLeft, ChevronRight, Lightbulb, Settings, Download } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import HTMLRenderer from './html-renderer'
 import { Card } from './ui/card'
 import SolutionModal from './solution-modal'
 import { useExamKeyboard } from "@/hooks/useExamKeyboard"
+import * as htmlToImage from "html-to-image"
 
 interface Props {
   coachingId: string
@@ -22,6 +23,7 @@ interface QuickModeConfig {
   autoNextDelay: number // in milliseconds
   soundEnabled: boolean
   vibrationEnabled: boolean
+  downloadWrongEnabled: boolean // Download wrong questions as images
 }
 
 interface SessionScore {
@@ -83,6 +85,7 @@ const triggerVibration = (pattern: number | number[]) => {
 export default function SectionViewer({ coachingId, sectionId, questionlist }: Props) {
   const searchParams = useSearchParams()
   const router = useRouter()
+  const wrongQuestionRef = useRef<HTMLDivElement>(null)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [selectedOption, setSelectedOption] = useState<number | null>(null)
   const [showSolution, setShowSolution] = useState(false)
@@ -93,6 +96,7 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
     autoNextDelay: 1500,
     soundEnabled: true,
     vibrationEnabled: true,
+    downloadWrongEnabled: false,
   })
   const [sessionScore, setSessionScore] = useState<SessionScore>({
     correct: 0,
@@ -135,6 +139,25 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
     setSelectedOption(null)
   }
 
+  const downloadWrongQuestion = async () => {
+    if (!wrongQuestionRef.current) return
+
+    try {
+      const dataUrl = await htmlToImage.toPng(wrongQuestionRef.current, { 
+        quality: 1,
+        pixelRatio: 2 
+      })
+      
+      const link = document.createElement('a')
+      link.href = dataUrl
+      link.download = `Q${currentIndex + 1}-Wrong-Answer.png`
+      link.click()
+    } catch (error) {
+      console.error('Error downloading question:', error)
+      alert('Failed to download question image')
+    }
+  }
+
   const handleOptionClick = (opt: number) => {
     if (selectedOption === null) {
       setSelectedOption(opt)
@@ -153,6 +176,14 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
         }
         if (quickModeConfig.vibrationEnabled) {
           triggerVibration(isCorrect ? 100 : [100, 50, 100])
+        }
+
+        // Download wrong question if enabled and answer is incorrect
+        if (quickModeConfig.downloadWrongEnabled && !isCorrect) {
+          // Delay download slightly to ensure DOM is updated with correct answer
+          setTimeout(() => {
+            downloadWrongQuestion()
+          }, 100)
         }
       }
     }
@@ -301,6 +332,19 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
                   />
                   <span className="text-sm">📳 Vibration feedback</span>
                 </label>
+
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={quickModeConfig.downloadWrongEnabled}
+                    onChange={(e) => setQuickModeConfig(prev => ({
+                      ...prev,
+                      downloadWrongEnabled: e.target.checked
+                    }))}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm">📥 Auto-download wrong answers</span>
+                </label>
               </div>
             </div>
           )}
@@ -340,7 +384,7 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
-        <Card className="p-6 md:p-8">
+        <Card className="p-6 md:p-8" ref={wrongQuestionRef}>
           {/* QUESTION HEADER WITH SOLUTION BUTTON */}
           <div className="mb-8 flex gap-4 items-start justify-between">
             <div className="flex gap-4 flex-1">
@@ -351,15 +395,27 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
                 <HTMLRenderer html={currentQuestion.question} />
               </div>
             </div>
-            {mounted && currentQuestion.solution_text && (
-              <button
-                onClick={() => setShowSolution(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition whitespace-nowrap ml-4"
-              >
-                <Lightbulb className="w-4 h-4" />
-                Solution
-              </button>
-            )}
+            <div className="flex gap-2 flex-shrink-0 ml-4">
+              {mounted && selectedOption !== null && selectedOption !== Number(currentQuestion.answer) && (
+                <button
+                  onClick={downloadWrongQuestion}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-50 dark:bg-orange-950 text-orange-600 dark:text-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900 transition whitespace-nowrap"
+                  title="Download this question with correct answer"
+                >
+                  <Download className="w-4 h-4" />
+                  Download
+                </button>
+              )}
+              {mounted && currentQuestion.solution_text && (
+                <button
+                  onClick={() => setShowSolution(true)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition whitespace-nowrap"
+                >
+                  <Lightbulb className="w-4 h-4" />
+                  Solution
+                </button>
+              )}
+            </div>
           </div>
 
           {/* OPTIONS */}
