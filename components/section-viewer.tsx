@@ -321,6 +321,25 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
 
       {/* QUESTION */}
       <div className="max-w-4xl mx-auto px-4 py-8 pb-28 md:pb-8">
+          <div className="hidden md:flex justify-between my-4">
+            <button
+              onClick={handlePrev}
+              disabled={currentIndex === 0}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg border bg-card hover:bg-muted disabled:opacity-50"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Previous
+            </button>
+
+            <button
+              onClick={handleNext}
+              disabled={currentIndex === totalQuestions - 1}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg border bg-card hover:bg-muted disabled:opacity-50"
+            >
+              Next
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
         <Card className="p-6 md:p-8">
           {/* QUESTION HEADER WITH SOLUTION BUTTON */}
           <div className="mb-8 flex gap-4 items-start justify-between">
