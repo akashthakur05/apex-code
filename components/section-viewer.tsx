@@ -318,9 +318,6 @@ useEffect(() => {
         </div>
       </div>
 
-        </div>
-      </div>
-
       {/* QUESTION */}
       <div className="max-w-4xl mx-auto px-4 py-8 pb-28 md:pb-8">
         <Card className="p-6 md:p-8">
