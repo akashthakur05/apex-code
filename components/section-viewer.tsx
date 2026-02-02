@@ -125,34 +125,15 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
     router.push(`?${params.toString()}`)
   }
 
-const handleNext = () => {
-  setCurrentIndex(prev => Math.min(prev + 1, totalQuestions - 1))
-  setSelectedOption(null)
-}
-
-const handlePrev = () => {
-  setCurrentIndex(prev => Math.max(prev - 1, 0))
-  setSelectedOption(null)
-}
-
-useEffect(() => {
-  updateUrl(currentIndex)
-}, [currentIndex])
-
-// Auto-next effect for quick mode
-useEffect(() => {
-  if (!quickModeConfig.enabled || !quickModeConfig.autoNextEnabled || selectedOption === null) {
-    return
+  const handleNext = () => {
+    setCurrentIndex(prev => Math.min(prev + 1, totalQuestions - 1))
+    setSelectedOption(null)
   }
 
-  const timer = setTimeout(() => {
-    handleNext()
-  }, quickModeConfig.autoNextDelay)
-
-  return () => clearTimeout(timer)
-}, [selectedOption, quickModeConfig.enabled, quickModeConfig.autoNextEnabled, quickModeConfig.autoNextDelay, currentIndex, totalQuestions])
-
-
+  const handlePrev = () => {
+    setCurrentIndex(prev => Math.max(prev - 1, 0))
+    setSelectedOption(null)
+  }
 
   const handleOptionClick = (opt: number) => {
     if (selectedOption === null) {
@@ -176,12 +157,30 @@ useEffect(() => {
       }
     }
   }
+
+  useEffect(() => {
+    updateUrl(currentIndex)
+  }, [currentIndex])
+
+  // Auto-next effect for quick mode
+  useEffect(() => {
+    if (!quickModeConfig.enabled || !quickModeConfig.autoNextEnabled || selectedOption === null) {
+      return
+    }
+
+    const timer = setTimeout(() => {
+      handleNext()
+    }, quickModeConfig.autoNextDelay)
+
+    return () => clearTimeout(timer)
+  }, [selectedOption, quickModeConfig.enabled, quickModeConfig.autoNextEnabled, quickModeConfig.autoNextDelay, currentIndex, totalQuestions])
+
   useExamKeyboard({
-  onNext: handleNext,
-  onPrev: handlePrev,
-  onSelectOption: handleOptionClick,
-  isOptionLocked: selectedOption !== null,
-})
+    onNext: handleNext,
+    onPrev: handlePrev,
+    onSelectOption: handleOptionClick,
+    isOptionLocked: selectedOption !== null,
+  })
 
   return (
     <main className="min-h-screen bg-background">
