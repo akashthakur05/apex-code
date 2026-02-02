@@ -8,11 +8,30 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import HTMLRenderer from './html-renderer'
 import { Card } from './ui/card'
 import SolutionModal from './solution-modal'
+import { useExamKeyboard } from "@/hooks/useExamKeyboard"
 
 interface Props {
   coachingId: string
   sectionId: string
   questionlist: any[]
+}
+const keyToOption = (key: string): number | null => {
+  switch (key.toLowerCase()) {
+    case 'a':
+    case '1':
+      return 1
+    case 'b':
+    case '2':
+      return 2
+    case 'c':
+    case '3':
+      return 3
+    case 'd':
+    case '4':
+      return 4
+    default:
+      return null
+  }
 }
 
 export default function SectionViewer({ coachingId, sectionId, questionlist }: Props) {
@@ -61,15 +80,6 @@ useEffect(() => {
   updateUrl(currentIndex)
 }, [currentIndex])
 
-useEffect(() => {
-  const handler = (e: KeyboardEvent) => {
-    if (["n", "N", "ArrowRight"].includes(e.key)) handleNext()
-    if (["p", "P", "ArrowLeft"].includes(e.key)) handlePrev()
-  }
-
-  window.addEventListener("keydown", handler)
-  return () => window.removeEventListener("keydown", handler)
-}, [])
 
 
   const handleOptionClick = (opt: number) => {
@@ -77,6 +87,12 @@ useEffect(() => {
       setSelectedOption(opt)
     }
   }
+  useExamKeyboard({
+  onNext: handleNext,
+  onPrev: handlePrev,
+  onSelectOption: handleOptionClick,
+  isOptionLocked: selectedOption !== null,
+})
 
   return (
     <main className="min-h-screen bg-background">
