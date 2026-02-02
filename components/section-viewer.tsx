@@ -210,6 +210,7 @@ useEffect(() => {
             {/* Quick Mode Toggle */}
             <div className="flex items-center gap-3">
               <button
+                type="button"
                 onClick={() => setQuickModeConfig(prev => ({ ...prev, enabled: !prev.enabled }))}
                 className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${
                   quickModeConfig.enabled ? 'bg-primary' : 'bg-muted'
@@ -225,6 +226,7 @@ useEffect(() => {
               <span className="text-sm font-medium whitespace-nowrap">Quick Mode</span>
               {quickModeConfig.enabled && (
                 <button
+                  type="button"
                   onClick={() => setShowQuickModeSettings(!showQuickModeSettings)}
                   className="p-1.5 rounded-lg bg-muted hover:bg-muted/80"
                   aria-label="Quick mode settings"
