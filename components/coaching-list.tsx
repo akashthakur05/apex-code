@@ -3,6 +3,8 @@ import path from "path"
 import Link from "next/link"
 import Image from "next/image"
 import { Card } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { CheckCircle2 } from "lucide-react"
 // const readFile = f => fs.promises.readFile(f, "utf8");
 
 type Institute = {
@@ -26,8 +28,16 @@ export default async function CoachingList() {
     <div className="min-h-screen bg-background">
       <div className="sticky top-0 z-10 border-b bg-card/95 backdrop-blur">
         <div className="max-w-6xl mx-auto px-4 py-6">
-          <h1 className="text-3xl font-bold">Mock Test Series</h1>
-          <p className="text-muted-foreground mt-2">
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-3xl font-bold">Mock Test Series</h1>
+            <Link href="/progress">
+              <Button variant="outline" className="gap-2">
+                <CheckCircle2 className="w-4 h-4" />
+                Track Progress
+              </Button>
+            </Link>
+          </div>
+          <p className="text-muted-foreground">
             Browse MCQ questions from various coaching institutes
           </p>
         </div>
