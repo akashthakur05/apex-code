@@ -4,7 +4,9 @@ import Link from "next/link"
 import Image from "next/image"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { CheckCircle2 } from "lucide-react"
+import { CheckCircle2, HelpCircle } from "lucide-react"
+import { HelpButton } from "./help-button"
+import { LogoutButton } from "./logout-button"
 // const readFile = f => fs.promises.readFile(f, "utf8");
 
 type Institute = {
@@ -30,12 +32,16 @@ export default async function CoachingList() {
         <div className="max-w-6xl mx-auto px-4 py-6">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-3xl font-bold">Mock Test Series</h1>
-            <Link href="/progress">
-              <Button variant="outline" className="gap-2">
-                <CheckCircle2 className="w-4 h-4" />
-                Track Progress
-              </Button>
-            </Link>
+            <div className="flex items-center gap-2">
+              <HelpButton />
+              <Link href="/progress">
+                <Button variant="outline" className="gap-2" data-tour="track-progress">
+                  <CheckCircle2 className="w-4 h-4" />
+                  Track Progress
+                </Button>
+              </Link>
+              <LogoutButton />
+            </div>
           </div>
           <p className="text-muted-foreground">
             Browse MCQ questions from various coaching institutes
