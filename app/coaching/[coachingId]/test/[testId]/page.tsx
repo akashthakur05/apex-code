@@ -1,3 +1,4 @@
+import { ProtectedLayout } from '@/components/protected-layout';
 import QuestionViewer from '@/components/question-viewer'
 import { notFound } from 'next/navigation'
 
@@ -90,6 +91,8 @@ export default async function TestPage({ params }: Props) {
 
 
   return (
+
+    <ProtectedLayout>
     <main className="min-h-screen bg-background">
       <QuestionViewer
         test={test}
@@ -97,5 +100,6 @@ export default async function TestPage({ params }: Props) {
         preloadedQuestions={questions}
       />
     </main>
+    </ProtectedLayout>
   )
 }

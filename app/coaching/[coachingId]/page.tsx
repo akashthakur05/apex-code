@@ -1,3 +1,4 @@
+import { ProtectedLayout } from '@/components/protected-layout'
 import TestList from '@/components/test-list'
 import { notFound, redirect } from 'next/navigation'
 
@@ -24,7 +25,7 @@ export async function generateStaticParams() {
   // console.log("----=========",data)
 
   return data.map((coaching: any) => ({
-    
+
     coachingId: coaching.id,
   }))
 }
@@ -41,7 +42,7 @@ export async function generateMetadata({ params }: Props) {
     (c: any) => c.id === coachingId
   )[0]
 
-  
+
 
   return {
     title: `${coaching?.name ?? 'Coaching'} - Test Series`,
@@ -55,7 +56,7 @@ export async function generateMetadata({ params }: Props) {
 
 export default async function CoachingPage({ params }: Props) {
   const { coachingId } = await params
-  const coachingInstitutes  = await loadCoachingData() as any;
+  const coachingInstitutes = await loadCoachingData() as any;
 
   const coaching = coachingInstitutes.find(
     (c: any) => c.id === coachingId
@@ -66,8 +67,10 @@ export default async function CoachingPage({ params }: Props) {
   }
 
   return (
-    <main className="min-h-screen bg-background">
-      <TestList coaching={coaching} />
-    </main>
+    <ProtectedLayout>
+      <main className="min-h-screen bg-background">
+        <TestList coaching={coaching} />
+      </main>
+    </ProtectedLayout>
   )
 }

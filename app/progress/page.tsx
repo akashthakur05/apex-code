@@ -2,6 +2,8 @@ import fs from 'fs'
 import path from 'path'
 import TestProgressTracker from '@/components/test-progress-tracker'
 import { CoachingInstitute } from '@/lib/types'
+import { Suspense } from 'react'
+import { ProtectedLayout } from '@/components/protected-layout'
 
 export const metadata = {
   title: 'Test Completion Tracker - Apex Code',
@@ -22,8 +24,10 @@ export default async function ProgressPage() {
   const coachingInstitutes = await loadCoachingData()
 
   return (
+    <ProtectedLayout>
     <main className="min-h-screen bg-background">
       <TestProgressTracker coachingInstitutes={coachingInstitutes} />
     </main>
+    </ProtectedLayout>
   )
 }
