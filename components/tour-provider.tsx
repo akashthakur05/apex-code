@@ -49,14 +49,11 @@ const tourSteps: Step[] = [
 
 export function TourProvider({ children }: { children: React.ReactNode }) {
   const [isTourActive, setIsTourActive] = useState(false)
-  const [hasSeenTour, setHasSeenTour] = useState(true)
+  const [isClient, setIsClient] = useState(false)
 
   useEffect(() => {
-    // Check if user has seen the tour before
-    const seen = localStorage.getItem('tour-seen')
-    if (!seen) {
-      setHasSeenTour(false)
-    }
+    // Only run on client side
+    setIsClient(true)
   }, [])
 
   const startTour = (tourName?: string) => {
@@ -75,13 +72,6 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
       endTour()
     }
   }
-
-  // Auto-start tour if user hasn't seen it before (commented out - can be enabled)
-  // useEffect(() => {
-  //   if (!hasSeenTour && typeof window !== 'undefined') {
-  //     setTimeout(() => startTour(), 1000)
-  //   }
-  // }, [hasSeenTour])
 
   return (
     <TourContext.Provider value={{ startTour, endTour, isTourActive }}>

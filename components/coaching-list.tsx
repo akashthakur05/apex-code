@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { CheckCircle2, HelpCircle } from "lucide-react"
 import { HelpButton } from "./help-button"
+import { LogoutButton } from "./logout-button"
 // const readFile = f => fs.promises.readFile(f, "utf8");
 
 type Institute = {
@@ -39,6 +40,7 @@ export default async function CoachingList() {
                   Track Progress
                 </Button>
               </Link>
+              <LogoutButton />
             </div>
           </div>
           <p className="text-muted-foreground">

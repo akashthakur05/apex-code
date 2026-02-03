@@ -32,16 +32,23 @@ export function useNotifications() {
 }
 
 export function NotificationsProvider({ children }: { children: React.ReactNode }) {
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: '1',
-      title: 'Welcome!',
-      message: 'Version 4.1.0 - New features: Message notifications & onboarding tour!',
-      type: 'info',
-      timestamp: new Date(),
-      read: false,
-    },
-  ])
+  const [notifications, setNotifications] = React.useState<Notification[] | null>(null)
+  const [isClient, setIsClient] = React.useState(false)
+
+  React.useEffect(() => {
+    // Initialize on client only
+    setIsClient(true)
+    setNotifications([
+      {
+        id: '1',
+        title: 'Welcome!',
+        message: 'Version 4.1.0 - New features: Message notifications & onboarding tour!',
+        type: 'info',
+        timestamp: new Date(),
+        read: false,
+      },
+    ])
+  }, [])
 
   const addNotification = useCallback(
     (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => {
@@ -72,10 +79,10 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 
   return (
     <NotificationContext.Provider
-      value={{ notifications, addNotification, removeNotification, markAsRead, clearAll }}
+      value={{ notifications: notifications || [], addNotification, removeNotification, markAsRead, clearAll }}
     >
       {children}
-      <NotificationCenter />
+      {isClient && <NotificationCenter />}
     </NotificationContext.Provider>
   )
 }
@@ -164,7 +171,10 @@ function NotificationCenter() {
                         {notification.message}
                       </p>
                       <p className="text-xs text-muted-foreground mt-2">
-                        {notification.timestamp.toLocaleTimeString()}
+                        {notification.timestamp instanceof Date 
+                          ? notification.timestamp.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+                          : 'just now'
+                        }
                       </p>
                     </div>
                     <Button
