@@ -3,6 +3,8 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import { NotificationsProvider } from './notifications-provider';
+import { TourProvider } from './tour-provider';
 
 interface AuthContextType {
   user: User | null;
@@ -26,7 +28,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider value={{ user, loading }}>
-      {children}
+      <NotificationsProvider>
+        <TourProvider>
+          {children}
+        </TourProvider>
+      </NotificationsProvider>
     </AuthContext.Provider>
   );
 }

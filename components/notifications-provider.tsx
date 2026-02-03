@@ -1,0 +1,189 @@
+'use client'
+
+import React, { createContext, useContext, useState, useCallback } from 'react'
+import { Bell, X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+
+export interface Notification {
+  id: string
+  title: string
+  message: string
+  type: 'info' | 'success' | 'warning' | 'error'
+  timestamp: Date
+  read: boolean
+}
+
+interface NotificationContextType {
+  notifications: Notification[]
+  addNotification: (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => void
+  removeNotification: (id: string) => void
+  markAsRead: (id: string) => void
+  clearAll: () => void
+}
+
+const NotificationContext = createContext<NotificationContextType | undefined>(undefined)
+
+export function useNotifications() {
+  const context = useContext(NotificationContext)
+  if (!context) {
+    throw new Error('useNotifications must be used within NotificationsProvider')
+  }
+  return context
+}
+
+export function NotificationsProvider({ children }: { children: React.ReactNode }) {
+  const [notifications, setNotifications] = useState<Notification[]>([
+    {
+      id: '1',
+      title: 'Welcome!',
+      message: 'Version 4.1.0 - New features: Message notifications & onboarding tour!',
+      type: 'info',
+      timestamp: new Date(),
+      read: false,
+    },
+  ])
+
+  const addNotification = useCallback(
+    (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => {
+      const newNotification: Notification = {
+        ...notification,
+        id: Date.now().toString(),
+        timestamp: new Date(),
+        read: false,
+      }
+      setNotifications((prev) => [newNotification, ...prev])
+    },
+    []
+  )
+
+  const removeNotification = useCallback((id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id))
+  }, [])
+
+  const markAsRead = useCallback((id: string) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+    )
+  }, [])
+
+  const clearAll = useCallback(() => {
+    setNotifications([])
+  }, [])
+
+  return (
+    <NotificationContext.Provider
+      value={{ notifications, addNotification, removeNotification, markAsRead, clearAll }}
+    >
+      {children}
+      <NotificationCenter />
+    </NotificationContext.Provider>
+  )
+}
+
+function NotificationCenter() {
+  const { notifications, removeNotification, markAsRead } = useNotifications()
+  const [isOpen, setIsOpen] = useState(false)
+  const unreadCount = notifications.filter((n) => !n.read).length
+
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case 'success':
+        return 'bg-green-50 border-green-200'
+      case 'warning':
+        return 'bg-yellow-50 border-yellow-200'
+      case 'error':
+        return 'bg-red-50 border-red-200'
+      default:
+        return 'bg-blue-50 border-blue-200'
+    }
+  }
+
+  const getTypeTextColor = (type: string) => {
+    switch (type) {
+      case 'success':
+        return 'text-green-800'
+      case 'warning':
+        return 'text-yellow-800'
+      case 'error':
+        return 'text-red-800'
+      default:
+        return 'text-blue-800'
+    }
+  }
+
+  return (
+    <div className="fixed bottom-6 right-6 z-50">
+      {/* Notification Bell Button */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="relative p-3 bg-primary text-primary-foreground rounded-full shadow-lg hover:shadow-xl transition-shadow"
+        data-tour="notification-bell"
+      >
+        <Bell className="w-6 h-6" />
+        {unreadCount > 0 && (
+          <span className="absolute top-0 right-0 w-6 h-6 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
+        )}
+      </button>
+
+      {/* Notification Dropdown */}
+      {isOpen && (
+        <div className="absolute bottom-16 right-0 w-96 max-h-96 bg-background border rounded-lg shadow-xl overflow-y-auto">
+          <div className="sticky top-0 bg-card border-b p-4 flex items-center justify-between">
+            <h3 className="font-semibold">Notifications</h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsOpen(false)}
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+
+          {notifications.length === 0 ? (
+            <div className="p-4 text-center text-muted-foreground">
+              No notifications
+            </div>
+          ) : (
+            <div className="divide-y">
+              {notifications.map((notification) => (
+                <div
+                  key={notification.id}
+                  className={`p-4 border-l-4 cursor-pointer hover:bg-muted transition ${getTypeColor(
+                    notification.type
+                  )} ${notification.read ? 'opacity-60' : ''}`}
+                  onClick={() => markAsRead(notification.id)}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h4 className={`font-semibold ${getTypeTextColor(notification.type)}`}>
+                        {notification.title}
+                      </h4>
+                      <p className="text-sm mt-1 text-muted-foreground">
+                        {notification.message}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        {notification.timestamp.toLocaleTimeString()}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        removeNotification(notification.id)
+                      }}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
