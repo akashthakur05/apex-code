@@ -5,6 +5,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next"
 import './globals.css'
 import Footer from '@/components/footer-home';
 import CoachingList from '@/components/coaching-list'
+import { AuthProvider } from '@/components/auth-provider'
 import 'katex/dist/katex.min.css';
 
 
@@ -51,12 +52,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`font-sans antialiased`}>
-        <div className="flex flex-col min-h-screen">
-          <main className="flex-1">
-            {children}
-          </main>
-          <Footer />
-        </div>
+        <AuthProvider>
+          <div className="flex flex-col min-h-screen">
+            <main className="flex-1">
+              {children}
+            </main>
+            <Footer />
+          </div>
+        </AuthProvider>
         <Analytics />
         <SpeedInsights/>
       </body>

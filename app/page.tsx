@@ -1,4 +1,5 @@
 import CoachingList from '@/components/coaching-list'
+import { ProtectedLayout } from '@/components/protected-layout'
 
 export const metadata = {
   title: 'MCQ Test Series - Browse Questions',
@@ -7,8 +8,10 @@ export const metadata = {
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-background">
-      <CoachingList />
-    </main>
+    <ProtectedLayout>
+      <main className="min-h-screen bg-background">
+        <CoachingList />
+      </main>
+    </ProtectedLayout>
   )
 }
