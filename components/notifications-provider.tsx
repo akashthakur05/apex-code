@@ -58,18 +58,18 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
         timestamp: new Date(),
         read: false,
       }
-      setNotifications((prev) => [newNotification, ...prev])
+      setNotifications((prev) => [newNotification, ...(prev || [])])
     },
     []
   )
 
   const removeNotification = useCallback((id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id))
+    setNotifications((prev) => (prev || []).filter((n) => n.id !== id))
   }, [])
 
   const markAsRead = useCallback((id: string) => {
     setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+      (prev || []).map((n) => (n.id === id ? { ...n, read: true } : n))
     )
   }, [])
 
