@@ -42,7 +42,15 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       {
         id: '1',
         title: 'Welcome!',
-        message: 'Version 4.1.0 - New features: Message notifications & onboarding tour!',
+        message: 'Version 12.0.2 - Shortcuts are now available. N/n-Next, P/p-Previous ,A/1-Option1, B/2-Option2, C/3-Option3, D/4-Option4,',
+        type: 'info',
+        timestamp: new Date(),
+        read: false,
+      },
+       {
+        id: '1',
+        title: 'Welcome!',
+        message: 'Version 12.0.2 - Google OAuth is now supported for authentication. You can now sign in using your Google account for a more seamless experience.',
         type: 'info',
         timestamp: new Date(),
         read: false,
