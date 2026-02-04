@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { CheckCircle2, HelpCircle } from "lucide-react"
 import { HelpButton } from "./help-button"
 import { LogoutButton } from "./logout-button"
+import { MobileNavbar } from "./mobile-navbar"
 // const readFile = f => fs.promises.readFile(f, "utf8");
 
 type Institute = {
@@ -29,10 +30,10 @@ export default async function CoachingList() {
   return (
     <div className="min-h-screen bg-background">
       <div className="sticky top-0 z-10 border-b bg-card/95 backdrop-blur">
-        <div className="max-w-6xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-3xl font-bold">Mock Test Series</h1>
-            <div className="flex items-center gap-2">
+        <div className="max-w-6xl mx-auto px-4 py-4 md:py-6">
+          <div className="flex items-center justify-between mb-4 gap-4">
+            <h1 className="text-2xl md:text-3xl font-bold">Mock Test Series</h1>
+            <div className="hidden md:flex items-center gap-2">
               <HelpButton />
               <Link href="/progress">
                 <Button variant="outline" className="gap-2" data-tour="track-progress">
@@ -42,8 +43,11 @@ export default async function CoachingList() {
               </Link>
               <LogoutButton />
             </div>
+            <div className="md:hidden">
+              <MobileNavbar />
+            </div>
           </div>
-          <p className="text-muted-foreground">
+          <p className="text-sm md:text-base text-muted-foreground">
             Browse MCQ questions from various coaching institutes
           </p>
         </div>

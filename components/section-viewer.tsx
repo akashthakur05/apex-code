@@ -384,35 +384,35 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
-        <Card className="p-6 md:p-8" ref={wrongQuestionRef}>
+        <Card className="p-4 md:p-8" ref={wrongQuestionRef}>
           {/* QUESTION HEADER WITH SOLUTION BUTTON */}
-          <div className="mb-8 flex gap-4 items-start justify-between">
-            <div className="flex gap-4 flex-1">
-              <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold flex-shrink-0">
+          <div className="mb-8 flex flex-col md:flex-row gap-4 items-start justify-between">
+            <div className="flex gap-4 flex-1 w-full">
+              <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold flex-shrink-0 mt-1">
                 {currentIndex + 1}
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <HTMLRenderer html={currentQuestion.question} />
               </div>
             </div>
-            <div className="flex gap-2 flex-shrink-0 ml-4">
+            <div className="flex flex-wrap gap-2 flex-shrink-0 w-full md:w-auto">
               {mounted && selectedOption !== null && selectedOption !== Number(currentQuestion.answer) && (
                 <button
                   onClick={downloadWrongQuestion}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-50 dark:bg-orange-950 text-orange-600 dark:text-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900 transition whitespace-nowrap"
+                  className="flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg bg-orange-50 dark:bg-orange-950 text-orange-600 dark:text-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900 transition whitespace-nowrap text-sm md:text-base"
                   title="Download this question with correct answer"
                 >
                   <Download className="w-4 h-4" />
-                  Download
+                  <span>Download</span>
                 </button>
               )}
               {mounted && currentQuestion.solution_text && (
                 <button
                   onClick={() => setShowSolution(true)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition whitespace-nowrap"
+                  className="flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition whitespace-nowrap text-sm md:text-base"
                 >
                   <Lightbulb className="w-4 h-4" />
-                  Solution
+                  <span>Solution</span>
                 </button>
               )}
             </div>

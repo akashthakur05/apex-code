@@ -1,8 +1,9 @@
 'use client'
 
-import React, { createContext, useContext, useState, useCallback } from 'react'
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
 import { Bell, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { usePathname } from 'next/navigation'
 
 export interface Notification {
   id: string
@@ -31,31 +32,41 @@ export function useNotifications() {
   return context
 }
 
+const DEFAULT_NOTIFICATIONS: Notification[] = [
+  {
+    id: '1',
+    title: 'Welcome!',
+    message: 'Version 12.0.2 - Shortcuts are now available. N/n-Next, P/p-Previous ,A/1-Option1, B/2-Option2, C/3-Option3, D/4-Option4,',
+    type: 'info',
+    timestamp: new Date(),
+    read: false,
+  },
+  {
+    id: '2',
+    title: 'Welcome!',
+    message: 'Version 12.0.2 - Google OAuth is now supported for authentication. You can now sign in using your Google account for a more seamless experience.',
+    type: 'info',
+    timestamp: new Date(),
+    read: false,
+  },
+]
+
 export function NotificationsProvider({ children }: { children: React.ReactNode }) {
   const [notifications, setNotifications] = React.useState<Notification[] | null>(null)
   const [isClient, setIsClient] = React.useState(false)
+  const [viewedNotifications, setViewedNotifications] = useState<Set<string>>(new Set())
 
   React.useEffect(() => {
     // Initialize on client only
     setIsClient(true)
-    setNotifications([
-      {
-        id: '1',
-        title: 'Welcome!',
-        message: 'Version 12.0.2 - Shortcuts are now available. N/n-Next, P/p-Previous ,A/1-Option1, B/2-Option2, C/3-Option3, D/4-Option4,',
-        type: 'info',
-        timestamp: new Date(),
-        read: false,
-      },
-       {
-        id: '1',
-        title: 'Welcome!',
-        message: 'Version 12.0.2 - Google OAuth is now supported for authentication. You can now sign in using your Google account for a more seamless experience.',
-        type: 'info',
-        timestamp: new Date(),
-        read: false,
-      },
-    ])
+    // Load viewed notifications from localStorage
+    const stored = localStorage.getItem('viewed_notifications')
+    const viewed = stored ? new Set(JSON.parse(stored)) : new Set<string>()
+    setViewedNotifications(viewed)
+
+    // Filter out already viewed notifications
+    const unviewedNotifications = DEFAULT_NOTIFICATIONS.filter(n => !viewed.has(n.id))
+    setNotifications(unviewedNotifications)
   }, [])
 
   const addNotification = useCallback(
@@ -73,13 +84,23 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 
   const removeNotification = useCallback((id: string) => {
     setNotifications((prev) => (prev || []).filter((n) => n.id !== id))
-  }, [])
+    // Mark as viewed in localStorage
+    const updated = new Set(viewedNotifications)
+    updated.add(id)
+    setViewedNotifications(updated)
+    localStorage.setItem('viewed_notifications', JSON.stringify(Array.from(updated)))
+  }, [viewedNotifications])
 
   const markAsRead = useCallback((id: string) => {
     setNotifications((prev) =>
       (prev || []).map((n) => (n.id === id ? { ...n, read: true } : n))
     )
-  }, [])
+    // Mark as viewed in localStorage
+    const updated = new Set(viewedNotifications)
+    updated.add(id)
+    setViewedNotifications(updated)
+    localStorage.setItem('viewed_notifications', JSON.stringify(Array.from(updated)))
+  }, [viewedNotifications])
 
   const clearAll = useCallback(() => {
     setNotifications([])
@@ -97,7 +118,16 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 
 function NotificationCenter() {
   const { notifications, removeNotification, markAsRead } = useNotifications()
+  const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
+  
+  // Only show notifications on homepage
+  const isHomepage = pathname === '/'
+  
+  if (!isHomepage) {
+    return null
+  }
+  
   const unreadCount = notifications.filter((n) => !n.read).length
 
   const getTypeColor = (type: string) => {
