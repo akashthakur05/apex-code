@@ -4,13 +4,16 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 import { Bell, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { usePathname } from 'next/navigation'
+import { collection, query, where, orderBy, onSnapshot, Timestamp } from 'firebase/firestore'
+import { db } from '@/lib/firebase'
+import { useAuth } from './auth-provider'
 
 export interface Notification {
   id: string
   title: string
   message: string
   type: 'info' | 'success' | 'warning' | 'error'
-  timestamp: Date
+  timestamp: number
   read: boolean
 }
 
@@ -38,7 +41,7 @@ const DEFAULT_NOTIFICATIONS: Notification[] = [
     title: 'Welcome!',
     message: 'Version 12.0.2 - Shortcuts are now available. N/n-Next, P/p-Previous ,A/1-Option1, B/2-Option2, C/3-Option3, D/4-Option4,',
     type: 'info',
-    timestamp: new Date(),
+    timestamp: Date.now(),
     read: false,
   },
   {
@@ -46,15 +49,16 @@ const DEFAULT_NOTIFICATIONS: Notification[] = [
     title: 'Welcome!',
     message: 'Version 12.0.2 - Google OAuth is now supported for authentication. You can now sign in using your Google account for a more seamless experience.',
     type: 'info',
-    timestamp: new Date(),
+    timestamp: Date.now(),
     read: false,
   },
 ]
 
 export function NotificationsProvider({ children }: { children: React.ReactNode }) {
-  const [notifications, setNotifications] = React.useState<Notification[] | null>(null)
+  const [notifications, setNotifications] = React.useState<Notification[]>([])
   const [isClient, setIsClient] = React.useState(false)
   const [viewedNotifications, setViewedNotifications] = useState<Set<string>>(new Set())
+  const { user } = useAuth()
 
   React.useEffect(() => {
     // Initialize on client only
@@ -69,12 +73,57 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     setNotifications(unviewedNotifications)
   }, [])
 
+  // Fetch notifications from Firebase
+  useEffect(() => {
+    if (!user || !isClient) return
+
+    try {
+      // Query for user-specific and broadcast notifications
+      const q = query(
+        collection(db, 'notifications'),
+        orderBy('timestamp', 'desc')
+      )
+
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const firebaseNotifications = snapshot.docs
+          .map(doc => {
+            const data = doc.data()
+            // Include if it's for this user or if it's a broadcast
+            if (data.userId === user.uid || data.userId === 'broadcast') {
+              return {
+                id: doc.id,
+                title: data.title || 'Notification',
+                message: data.message || '',
+                type: (data.type || 'info') as 'info' | 'success' | 'warning' | 'error',
+                timestamp: data.timestamp instanceof Timestamp ? data.timestamp.toMillis() : Date.now(),
+                read: data.read || false,
+              }
+            }
+            return null
+          })
+          .filter((n): n is Notification => n !== null)
+        
+        // Combine with default notifications
+        const combined = [...DEFAULT_NOTIFICATIONS, ...firebaseNotifications]
+        const viewed = new Set(viewedNotifications)
+        const filtered = combined.filter(n => !viewed.has(n.id))
+        setNotifications(filtered)
+      }, (error) => {
+        console.error('Error fetching notifications from Firebase:', error)
+      })
+
+      return () => unsubscribe()
+    } catch (error) {
+      console.error('Error setting up Firebase notifications listener:', error)
+    }
+  }, [user, isClient, viewedNotifications])
+
   const addNotification = useCallback(
     (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => {
       const newNotification: Notification = {
         ...notification,
         id: Date.now().toString(),
-        timestamp: new Date(),
+        timestamp: Date.now(),
         read: false,
       }
       setNotifications((prev) => [newNotification, ...(prev || [])])
@@ -209,10 +258,7 @@ function NotificationCenter() {
                         {notification.message}
                       </p>
                       <p className="text-xs text-muted-foreground mt-2">
-                        {notification.timestamp instanceof Date 
-                          ? notification.timestamp.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
-                          : 'just now'
-                        }
+                        {new Date(notification.timestamp).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
                       </p>
                     </div>
                     <Button
