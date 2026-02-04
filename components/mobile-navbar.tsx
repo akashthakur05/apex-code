@@ -18,20 +18,14 @@ import Link from 'next/link';
 
 export function MobileNavbar() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { startTour } = useTour();
   const [loading, setLoading] = useState(false);
 
   const handleLogout = async () => {
     try {
       setLoading(true);
-      const { getFirebaseAuth } = await import('@/lib/firebase')
-      const { signOut } = await import('firebase/auth')
-      const auth = await getFirebaseAuth()
-      
-      if (auth) {
-        await signOut(auth);
-      }
+      await logout();
       router.push('/login');
     } catch (error) {
       console.error('Logout error:', error);
@@ -60,7 +54,7 @@ export function MobileNavbar() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <div className="px-2 py-1.5">
-          <p className="text-sm font-medium truncate">{user?.displayName || user?.email}</p>
+          <p className="text-sm font-medium truncate">{user?.name || user?.email}</p>
           <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
         </div>
         <DropdownMenuSeparator />

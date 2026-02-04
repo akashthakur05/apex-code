@@ -4,11 +4,6 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 import { Bell, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { usePathname } from 'next/navigation'
-import { useAuth } from './auth-provider'
-
-// Firebase imports are lazy-loaded to support static export
-let firebaseLoaded = false
-let collection: any, query: any, where: any, orderBy: any, onSnapshot: any, Timestamp: any, db: any
 
 export interface Notification {
   id: string
@@ -41,7 +36,7 @@ const DEFAULT_NOTIFICATIONS: Notification[] = [
   {
     id: '1',
     title: 'Welcome!',
-    message: 'Version 12.0.2 - Shortcuts are now available. N/n-Next, P/p-Previous ,A/1-Option1, B/2-Option2, C/3-Option3, D/4-Option4,',
+    message: 'Shortcuts are now available. N/n-Next, P/p-Previous, A/1-Option1, B/2-Option2, C/3-Option3, D/4-Option4',
     type: 'info',
     timestamp: Date.now(),
     read: false,
@@ -49,7 +44,7 @@ const DEFAULT_NOTIFICATIONS: Notification[] = [
   {
     id: '2',
     title: 'Welcome!',
-    message: 'Version 12.0.2 - Google OAuth is now supported for authentication. You can now sign in using your Google account for a more seamless experience.',
+    message: 'Simple authentication is now available. Sign in with any email/password combination.',
     type: 'info',
     timestamp: Date.now(),
     read: false,
@@ -57,86 +52,19 @@ const DEFAULT_NOTIFICATIONS: Notification[] = [
 ]
 
 export function NotificationsProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth()
   const [notifications, setNotifications] = React.useState<Notification[]>([])
   const [isClient, setIsClient] = React.useState(false)
   const [viewedNotifications, setViewedNotifications] = useState<Set<string>>(new Set())
 
   React.useEffect(() => {
-    // Initialize on client only
     setIsClient(true)
-    // Load viewed notifications from localStorage
     const stored = localStorage.getItem('viewed_notifications')
     const viewed = stored ? new Set(JSON.parse(stored)) : new Set<string>()
     setViewedNotifications(viewed)
 
-    // Filter out already viewed notifications
     const unviewedNotifications = DEFAULT_NOTIFICATIONS.filter(n => !viewed.has(n.id))
     setNotifications(unviewedNotifications)
   }, [])
-
-  // Fetch notifications from Firebase (lazy-loaded)
-  useEffect(() => {
-    if (!user || !isClient) return
-
-    const setupFirebaseListener = async () => {
-      try {
-        // Lazy load Firebase
-        if (!firebaseLoaded) {
-          const firebaseModule = await import('firebase/firestore')
-          collection = firebaseModule.collection
-          query = firebaseModule.query
-          where = firebaseModule.where
-          orderBy = firebaseModule.orderBy
-          onSnapshot = firebaseModule.onSnapshot
-          Timestamp = firebaseModule.Timestamp
-          const { getFirebaseDb } = await import('@/lib/firebase')
-          db = await getFirebaseDb()
-          firebaseLoaded = true
-        }
-
-        // Query for user-specific and broadcast notifications
-        const q = query(
-          collection(db, 'notifications'),
-          orderBy('timestamp', 'desc')
-        )
-
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-          const firebaseNotifications = snapshot.docs
-            .map((doc: any) => {
-              const data = doc.data()
-              // Include if it's for this user or if it's a broadcast
-              if (data.userId === user.uid || data.userId === 'broadcast') {
-                return {
-                  id: doc.id,
-                  title: data.title || 'Notification',
-                  message: data.message || '',
-                  type: (data.type || 'info') as 'info' | 'success' | 'warning' | 'error',
-                  timestamp: data.timestamp instanceof Timestamp ? data.timestamp.toMillis() : Date.now(),
-                  read: data.read || false,
-                }
-              }
-              return null
-            })
-            .filter((n: any): n is Notification => n !== null)
-          
-          // Combine with default notifications
-          const combined = [...DEFAULT_NOTIFICATIONS, ...firebaseNotifications]
-          const viewed = new Set(viewedNotifications)
-          const filtered = combined.filter(n => !viewed.has(n.id))
-          setNotifications(filtered)
-        }, (error: any) => {
-          console.error('Error fetching notifications from Firebase:', error)
-        })
-
-        return () => unsubscribe()
-      } catch (error) {
-        console.error('Error setting up Firebase notifications listener:', error)
-      }
-    }
-
-    setupFirebaseListener()
-  }, [user, isClient, viewedNotifications])
 
   const addNotification = useCallback(
     (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => {
@@ -153,7 +81,6 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 
   const removeNotification = useCallback((id: string) => {
     setNotifications((prev) => (prev || []).filter((n) => n.id !== id))
-    // Mark as viewed in localStorage
     const updated = new Set(viewedNotifications)
     updated.add(id)
     setViewedNotifications(updated)
@@ -164,7 +91,6 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     setNotifications((prev) =>
       (prev || []).map((n) => (n.id === id ? { ...n, read: true } : n))
     )
-    // Mark as viewed in localStorage
     const updated = new Set(viewedNotifications)
     updated.add(id)
     setViewedNotifications(updated)

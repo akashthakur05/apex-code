@@ -4,9 +4,18 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { NotificationsProvider } from './notifications-provider';
 import { TourProvider } from './tour-provider';
 
+interface User {
+  uid: string;
+  email: string;
+  name: string;
+}
+
 interface AuthContextType {
-  user: any | null;
+  user: User | null;
   loading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  signup: (email: string, password: string, name: string) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -20,45 +29,50 @@ export function useAuth() {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<any | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const setupAuth = async () => {
+    // Load user from localStorage on mount
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
       try {
-        const { getFirebaseAuth } = await import('@/lib/firebase')
-        const { onAuthStateChanged } = await import('firebase/auth')
-        const auth = await getFirebaseAuth()
-        
-        if (!auth) {
-          setLoading(false)
-          return
-        }
-
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-          setUser(currentUser);
-          setLoading(false);
-        });
-
-        return () => unsubscribe();
+        setUser(JSON.parse(storedUser));
       } catch (error) {
-        console.error('Auth setup error:', error)
-        setLoading(false)
+        console.error('Failed to parse stored user:', error);
       }
     }
-
-    let unsubscribe: (() => void) | null = null
-    setupAuth().then((cleanup) => {
-      unsubscribe = cleanup || null
-    })
-    
-    return () => {
-      unsubscribe?.()
-    }
+    setLoading(false);
   }, []);
 
+  const login = async (email: string, password: string) => {
+    const user: User = {
+      uid: Date.now().toString(),
+      email,
+      name: email.split('@')[0],
+    };
+    localStorage.setItem('user', JSON.stringify(user));
+    setUser(user);
+  };
+
+  const logout = async () => {
+    localStorage.removeItem('user');
+    localStorage.removeItem('viewed_notifications');
+    setUser(null);
+  };
+
+  const signup = async (email: string, password: string, name: string) => {
+    const user: User = {
+      uid: Date.now().toString(),
+      email,
+      name,
+    };
+    localStorage.setItem('user', JSON.stringify(user));
+    setUser(user);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, signup }}>
       <NotificationsProvider>
         <TourProvider>
           {children}
@@ -66,12 +80,4 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       </NotificationsProvider>
     </AuthContext.Provider>
   );
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
 }
