@@ -77,24 +77,24 @@ export function useNotifications() {
    Default notifications
 --------------------------------------------- */
 const DEFAULT_NOTIFICATIONS: Notification[] = [
-  {
-    id: 'welcome-shortcuts',
-    title: 'Welcome!',
-    message:
-      'Version 12.0.2 — Shortcuts added: N/P navigation, A–D or 1–4 for answers.',
-    type: 'info',
-    timestamp: Date.now(),
-    read: false,
-  },
-  {
-    id: 'welcome-google-auth',
-    title: 'Welcome!',
-    message:
-      'Version 12.0.2 — Google OAuth is now available for faster login.',
-    type: 'info',
-    timestamp: Date.now(),
-    read: false,
-  },
+  // {
+  //   id: 'welcome-shortcuts',
+  //   title: 'Welcome!',
+  //   message:
+  //     'Version 12.0.2 — Shortcuts added: N/P navigation, A–D or 1–4 for answers.',
+  //   type: 'info',
+  //   timestamp: Date.now(),
+  //   read: false,
+  // },
+  // {
+  //   id: 'welcome-google-auth',
+  //   title: 'Welcome!',
+  //   message:
+  //     'Version 12.0.2 — Google OAuth is now available for faster login.',
+  //   type: 'info',
+  //   timestamp: Date.now(),
+  //   read: false,
+  // },
 ]
 
 /* ---------------------------------------------
@@ -177,12 +177,12 @@ export function NotificationsProvider({
                   ): Notification | null => {
                     const data = doc.data()
 
-                    if (
-                      data.userId !== user.uid &&
-                      data.userId !== 'broadcast'
-                    ) {
-                      return null
-                    }
+                    // if (
+                    //   data.userId !== user.uid &&
+                    //   data.userId !== 'broadcast'
+                    // ) {
+                    //   return null
+                    // }
 
                     return {
                       id: doc.id,
