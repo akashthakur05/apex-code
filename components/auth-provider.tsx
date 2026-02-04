@@ -1,29 +1,48 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
-import { User, onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
 import { NotificationsProvider } from './notifications-provider';
 import { TourProvider } from './tour-provider';
 
 interface AuthContextType {
-  user: User | null;
+  user: any | null;
   loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
-    });
+    const setupAuth = async () => {
+      try {
+        const { getFirebaseAuth } = await import('@/lib/firebase')
+        const { onAuthStateChanged } = await import('firebase/auth')
+        const auth = getFirebaseAuth()
+        
+        if (!auth) {
+          setLoading(false)
+          return
+        }
 
-    return () => unsubscribe();
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+          setUser(currentUser);
+          setLoading(false);
+        });
+
+        return () => unsubscribe();
+      } catch (error) {
+        console.error('Auth setup error:', error)
+        setLoading(false)
+      }
+    }
+
+    const cleanup = setupAuth()
+    return () => {
+      cleanup?.then((fn) => fn?.())
+    }
   }, []);
 
   return (

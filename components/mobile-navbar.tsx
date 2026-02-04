@@ -2,8 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { signOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
 import { useAuth } from '@/components/auth-provider';
 import { useTour } from './tour-provider';
 import {
@@ -27,7 +25,13 @@ export function MobileNavbar() {
   const handleLogout = async () => {
     try {
       setLoading(true);
-      await signOut(auth);
+      const { getFirebaseAuth } = await import('@/lib/firebase')
+      const { signOut } = await import('firebase/auth')
+      const auth = getFirebaseAuth()
+      
+      if (auth) {
+        await signOut(auth);
+      }
       router.push('/login');
     } catch (error) {
       console.error('Logout error:', error);

@@ -1,12 +1,11 @@
-import { collection, addDoc, updateDoc, doc, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore'
-import { db } from '@/lib/firebase'
+'use client'
 
 export interface NotificationData {
   userId: string
   title: string
   message: string
   type: 'info' | 'success' | 'warning' | 'error'
-  timestamp: Timestamp
+  timestamp: any
   read: boolean
 }
 
@@ -20,6 +19,12 @@ export async function addNotificationForUser(
   type: 'info' | 'success' | 'warning' | 'error' = 'info'
 ) {
   try {
+    const { collection, addDoc, Timestamp } = await import('firebase/firestore')
+    const { getFirebaseDb } = await import('@/lib/firebase')
+    const db = getFirebaseDb()
+    
+    if (!db) throw new Error('Firebase not initialized')
+    
     const docRef = await addDoc(collection(db, 'notifications'), {
       userId,
       title,
@@ -40,6 +45,12 @@ export async function addNotificationForUser(
  */
 export async function markNotificationAsRead(notificationId: string) {
   try {
+    const { updateDoc, doc } = await import('firebase/firestore')
+    const { getFirebaseDb } = await import('@/lib/firebase')
+    const db = getFirebaseDb()
+    
+    if (!db) throw new Error('Firebase not initialized')
+    
     await updateDoc(doc(db, 'notifications', notificationId), {
       read: true,
     })
