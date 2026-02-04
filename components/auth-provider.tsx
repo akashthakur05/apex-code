@@ -1,46 +1,96 @@
-'use client';
+'use client'
 
-import { createContext, useContext, useEffect, useState } from 'react';
-import { User, onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import { NotificationsProvider } from './notifications-provider';
-import { TourProvider } from './tour-provider';
+import { createContext, useContext, useEffect, useState } from 'react'
 
-interface AuthContextType {
-  user: User | null;
-  loading: boolean;
+import { NotificationsProvider } from './notifications-provider'
+import { TourProvider } from './tour-provider'
+import { ClientOnly } from './client-only'
+
+interface User {
+  uid: string;
+  email: string;
+  name: string;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+interface AuthContextType {
+  user: any | null
+  loading: boolean
+}
+
+export const AuthContext = createContext<AuthContextType | undefined>(undefined)
+
+export function useAuth() {
+  const ctx = useContext(AuthContext)
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider')
+  return ctx
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
-    });
+    let unsubscribe: (() => void) | undefined
 
-    return () => unsubscribe();
-  }, []);
+    ;(async () => {
+      try {
+        const { getFirebaseAuth } = await import('@/lib/firebase')
+        const { onAuthStateChanged } = await import('firebase/auth')
+        const auth = await getFirebaseAuth()
+
+        if (!auth) {
+          setLoading(false)
+          return
+        }
+
+        unsubscribe = onAuthStateChanged(auth, currentUser => {
+          setUser(currentUser)
+          setLoading(false)
+        })
+      } catch (e) {
+        console.error('Auth setup error:', e)
+        setLoading(false)
+      }
+    })()
+
+    return () => unsubscribe?.()
+  }, [])
+
+  const login = async (email: string, password: string) => {
+    const user: User = {
+      uid: Date.now().toString(),
+      email,
+      name: email.split('@')[0],
+    };
+    localStorage.setItem('user', JSON.stringify(user));
+    setUser(user);
+  };
+
+  const logout = async () => {
+    localStorage.removeItem('user');
+    localStorage.removeItem('viewed_notifications');
+    setUser(null);
+  };
+
+  const signup = async (email: string, password: string, name: string) => {
+    const user: User = {
+      uid: Date.now().toString(),
+      email,
+      name,
+    };
+    localStorage.setItem('user', JSON.stringify(user));
+    setUser(user);
+  };
 
   return (
     <AuthContext.Provider value={{ user, loading }}>
-      <NotificationsProvider>
-        <TourProvider>
-          {children}
-        </TourProvider>
-      </NotificationsProvider>
+      <ClientOnly>
+        <NotificationsProvider>
+          <TourProvider>
+            {children}
+          </TourProvider>
+        </NotificationsProvider>
+      </ClientOnly>
     </AuthContext.Provider>
-  );
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
+  )
 }

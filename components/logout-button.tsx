@@ -1,7 +1,5 @@
 'use client';
 
-import { signOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -13,7 +11,13 @@ export function LogoutButton() {
   const handleLogout = async () => {
     try {
       setLoading(true);
-      await signOut(auth);
+      const { getFirebaseAuth } = await import('@/lib/firebase')
+      const { signOut } = await import('firebase/auth')
+      const auth = await getFirebaseAuth()
+      
+      if (auth) {
+        await signOut(auth);
+      }
       router.push('/login');
     } catch (error) {
       console.error('Logout error:', error);

@@ -2,8 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
@@ -16,6 +14,15 @@ export default function LoginForm() {
     try {
       setLoading(true);
       setError(null);
+      const { getFirebaseAuth } = await import('@/lib/firebase')
+      const { signInWithPopup, GoogleAuthProvider } = await import('firebase/auth')
+      const auth = await getFirebaseAuth()
+      
+      if (!auth) {
+        setError('Firebase not initialized. Please try again.');
+        return
+      }
+      
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
       router.push('/');

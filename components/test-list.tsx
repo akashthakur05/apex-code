@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { ChevronLeft, CheckCircle, CheckCircle2 } from 'lucide-react'
 import SectionFilter from './section-filter'
 import { isTestComplete } from '@/lib/bookmark-storage'
+import { MobileNavbar } from './mobile-navbar'
 
 interface Props {
   coaching: CoachingInstitute
@@ -31,22 +32,27 @@ export default function TestList({ coaching }: Props) {
       {/* Header */}
       <div className="sticky top-0 z-10 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
         <div className="max-w-6xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-4 gap-4">
             <Link href="/" className="inline-flex items-center gap-2 text-primary hover:underline">
               <ChevronLeft className="w-4 h-4" />
               Back to Coaching
             </Link>
-            <Link href="/progress">
-              <Button variant="outline" size="sm" className="gap-2">
-                <CheckCircle2 className="w-4 h-4" />
-                Track Progress
-              </Button>
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link href="/progress" className="hidden md:inline">
+                <Button variant="outline" size="sm" className="gap-2">
+                  <CheckCircle2 className="w-4 h-4" />
+                  Track Progress
+                </Button>
+              </Link>
+              <div className="md:hidden">
+                <MobileNavbar />
+              </div>
+            </div>
           </div>
-          <h1 className="text-3xl md:text-4xl font-bold text-foreground">
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-foreground">
             {coaching.name}
           </h1>
-          <p className="text-muted-foreground mt-2">
+          <p className="text-sm md:text-base text-muted-foreground mt-2">
             {coaching.tests.length} test series available
           </p>
         </div>
