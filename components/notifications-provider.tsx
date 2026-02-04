@@ -103,8 +103,8 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
           orderBy = firebaseModule.orderBy
           onSnapshot = firebaseModule.onSnapshot
           Timestamp = firebaseModule.Timestamp
-          const { db: firebaseDb } = await import('@/lib/firebase')
-          db = firebaseDb
+          const { getFirebaseDb } = await import('@/lib/firebase')
+          db = await getFirebaseDb()
           firebaseLoaded = true
         }
 

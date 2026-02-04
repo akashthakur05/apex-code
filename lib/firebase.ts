@@ -5,6 +5,7 @@ let firebaseInitialized = false
 let cachedApp: any = null
 let cachedAuth: any = null
 let cachedDb: any = null
+let initPromise: Promise<any> | null = null
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -15,43 +16,51 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 }
 
-// Initialize Firebase only once on client
-const initFirebase = () => {
-  if (firebaseInitialized || typeof window === 'undefined') return { app: cachedApp, auth: cachedAuth, db: cachedDb }
+// Initialize Firebase only once on client (async version)
+export const initFirebaseAsync = async () => {
+  if (firebaseInitialized) return { app: cachedApp, auth: cachedAuth, db: cachedDb }
+  if (typeof window === 'undefined') return { app: null, auth: null, db: null }
 
-  try {
-    const { initializeApp } = require('firebase/app')
-    const { getAuth } = require('firebase/auth')
-    const { getFirestore } = require('firebase/firestore')
+  // Prevent multiple initializations
+  if (initPromise) return initPromise
 
-    cachedApp = initializeApp(firebaseConfig)
-    cachedAuth = getAuth(cachedApp)
-    cachedDb = getFirestore(cachedApp)
-    firebaseInitialized = true
-  } catch (error) {
-    console.error('Firebase initialization error:', error)
-  }
+  initPromise = (async () => {
+    try {
+      const { initializeApp } = await import('firebase/app')
+      const { getAuth } = await import('firebase/auth')
+      const { getFirestore } = await import('firebase/firestore')
 
-  return { app: cachedApp, auth: cachedAuth, db: cachedDb }
+      cachedApp = initializeApp(firebaseConfig)
+      cachedAuth = getAuth(cachedApp)
+      cachedDb = getFirestore(cachedApp)
+      firebaseInitialized = true
+    } catch (error) {
+      console.error('Firebase initialization error:', error)
+    }
+
+    return { app: cachedApp, auth: cachedAuth, db: cachedDb }
+  })()
+
+  return initPromise
 }
 
-// Export lazy getters
-export const getFirebaseApp = () => {
-  const { app } = initFirebase()
+// Export async getters
+export const getFirebaseApp = async () => {
+  const { app } = await initFirebaseAsync()
   return app
 }
 
-export const getFirebaseAuth = () => {
-  const { auth } = initFirebase()
+export const getFirebaseAuth = async () => {
+  const { auth } = await initFirebaseAsync()
   return auth
 }
 
-export const getFirebaseDb = () => {
-  const { db } = initFirebase()
+export const getFirebaseDb = async () => {
+  const { db } = await initFirebaseAsync()
   return db
 }
 
-// Direct exports for backward compatibility (will be undefined during build)
-export const app = typeof window !== 'undefined' ? getFirebaseApp() : null
-export const auth = typeof window !== 'undefined' ? getFirebaseAuth() : null
-export const db = typeof window !== 'undefined' ? getFirebaseDb() : null
+// Direct exports for backward compatibility (will be null during build)
+export const app = null
+export const auth = null
+export const db = null

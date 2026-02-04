@@ -21,7 +21,7 @@ export async function addNotificationForUser(
   try {
     const { collection, addDoc, Timestamp } = await import('firebase/firestore')
     const { getFirebaseDb } = await import('@/lib/firebase')
-    const db = getFirebaseDb()
+    const db = await getFirebaseDb()
     
     if (!db) throw new Error('Firebase not initialized')
     
@@ -47,7 +47,7 @@ export async function markNotificationAsRead(notificationId: string) {
   try {
     const { updateDoc, doc } = await import('firebase/firestore')
     const { getFirebaseDb } = await import('@/lib/firebase')
-    const db = getFirebaseDb()
+    const db = await getFirebaseDb()
     
     if (!db) throw new Error('Firebase not initialized')
     
@@ -65,6 +65,12 @@ export async function markNotificationAsRead(notificationId: string) {
  */
 export async function getUnreadNotifications(userId: string) {
   try {
+    const { collection, query, where, orderBy, getDocs } = await import('firebase/firestore')
+    const { getFirebaseDb } = await import('@/lib/firebase')
+    const db = await getFirebaseDb()
+    
+    if (!db) throw new Error('Firebase not initialized')
+    
     const q = query(
       collection(db, 'notifications'),
       where('userId', '==', userId),
@@ -88,6 +94,12 @@ export async function getUnreadNotifications(userId: string) {
  */
 export async function getAllNotifications(userId: string) {
   try {
+    const { collection, query, where, orderBy, getDocs } = await import('firebase/firestore')
+    const { getFirebaseDb } = await import('@/lib/firebase')
+    const db = await getFirebaseDb()
+    
+    if (!db) throw new Error('Firebase not initialized')
+    
     const q = query(
       collection(db, 'notifications'),
       where('userId', '==', userId),
@@ -114,6 +126,12 @@ export async function addBroadcastNotification(
   type: 'info' | 'success' | 'warning' | 'error' = 'info'
 ) {
   try {
+    const { collection, addDoc, Timestamp } = await import('firebase/firestore')
+    const { getFirebaseDb } = await import('@/lib/firebase')
+    const db = await getFirebaseDb()
+    
+    if (!db) throw new Error('Firebase not initialized')
+    
     const docRef = await addDoc(collection(db, 'notifications'), {
       userId: 'broadcast',
       title,

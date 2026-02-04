@@ -13,7 +13,7 @@ export function LogoutButton() {
       setLoading(true);
       const { getFirebaseAuth } = await import('@/lib/firebase')
       const { signOut } = await import('firebase/auth')
-      const auth = getFirebaseAuth()
+      const auth = await getFirebaseAuth()
       
       if (auth) {
         await signOut(auth);

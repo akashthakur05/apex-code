@@ -16,7 +16,7 @@ export default function LoginForm() {
       setError(null);
       const { getFirebaseAuth } = await import('@/lib/firebase')
       const { signInWithPopup, GoogleAuthProvider } = await import('firebase/auth')
-      const auth = getFirebaseAuth()
+      const auth = await getFirebaseAuth()
       
       if (!auth) {
         setError('Firebase not initialized. Please try again.');

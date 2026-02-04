@@ -20,7 +20,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const { getFirebaseAuth } = await import('@/lib/firebase')
         const { onAuthStateChanged } = await import('firebase/auth')
-        const auth = getFirebaseAuth()
+        const auth = await getFirebaseAuth()
         
         if (!auth) {
           setLoading(false)
@@ -39,9 +39,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    const cleanup = setupAuth()
+    let unsubscribe: (() => void) | null = null
+    setupAuth().then((cleanup) => {
+      unsubscribe = cleanup || null
+    })
+    
     return () => {
-      cleanup?.then((fn) => fn?.())
+      unsubscribe?.()
     }
   }, []);
 
