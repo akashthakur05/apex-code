@@ -6,6 +6,12 @@ import { NotificationsProvider } from './notifications-provider'
 import { TourProvider } from './tour-provider'
 import { ClientOnly } from './client-only'
 
+interface User {
+  uid: string;
+  email: string;
+  name: string;
+}
+
 interface AuthContextType {
   user: any | null
   loading: boolean
@@ -49,6 +55,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => unsubscribe?.()
   }, [])
+
+  const login = async (email: string, password: string) => {
+    const user: User = {
+      uid: Date.now().toString(),
+      email,
+      name: email.split('@')[0],
+    };
+    localStorage.setItem('user', JSON.stringify(user));
+    setUser(user);
+  };
+
+  const logout = async () => {
+    localStorage.removeItem('user');
+    localStorage.removeItem('viewed_notifications');
+    setUser(null);
+  };
+
+  const signup = async (email: string, password: string, name: string) => {
+    const user: User = {
+      uid: Date.now().toString(),
+      email,
+      name,
+    };
+    localStorage.setItem('user', JSON.stringify(user));
+    setUser(user);
+  };
 
   return (
     <AuthContext.Provider value={{ user, loading }}>
