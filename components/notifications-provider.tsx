@@ -4,9 +4,10 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 import { Bell, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { usePathname } from 'next/navigation'
-import { collection, query, where, orderBy, onSnapshot, Timestamp } from 'firebase/firestore'
-import { db } from '@/lib/firebase'
-import { useAuth } from './auth-provider'
+
+// Firebase imports are lazy-loaded to support static export
+let firebaseLoaded = false
+let collection: any, query: any, where: any, orderBy: any, onSnapshot: any, Timestamp: any, db: any
 
 export interface Notification {
   id: string
@@ -58,7 +59,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   const [notifications, setNotifications] = React.useState<Notification[]>([])
   const [isClient, setIsClient] = React.useState(false)
   const [viewedNotifications, setViewedNotifications] = useState<Set<string>>(new Set())
-  const { user } = useAuth()
+  const [user, setUser] = useState<any>(null)
 
   React.useEffect(() => {
     // Initialize on client only
@@ -71,51 +72,83 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     // Filter out already viewed notifications
     const unviewedNotifications = DEFAULT_NOTIFICATIONS.filter(n => !viewed.has(n.id))
     setNotifications(unviewedNotifications)
+
+    // Try to lazy-load and get user from auth provider
+    const loadUser = async () => {
+      try {
+        const { useAuth: useAuthImport } = await import('./auth-provider')
+        const auth = useAuthImport()
+        if (auth?.user) {
+          setUser(auth.user)
+        }
+      } catch (error) {
+        console.error('Failed to load auth provider:', error)
+      }
+    }
+    loadUser()
   }, [])
 
-  // Fetch notifications from Firebase
+  // Fetch notifications from Firebase (lazy-loaded)
   useEffect(() => {
     if (!user || !isClient) return
 
-    try {
-      // Query for user-specific and broadcast notifications
-      const q = query(
-        collection(db, 'notifications'),
-        orderBy('timestamp', 'desc')
-      )
+    const setupFirebaseListener = async () => {
+      try {
+        // Lazy load Firebase
+        if (!firebaseLoaded) {
+          const firebaseModule = await import('firebase/firestore')
+          collection = firebaseModule.collection
+          query = firebaseModule.query
+          where = firebaseModule.where
+          orderBy = firebaseModule.orderBy
+          onSnapshot = firebaseModule.onSnapshot
+          Timestamp = firebaseModule.Timestamp
+          const { db: firebaseDb } = await import('@/lib/firebase')
+          db = firebaseDb
+          firebaseLoaded = true
+        }
 
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const firebaseNotifications = snapshot.docs
-          .map(doc => {
-            const data = doc.data()
-            // Include if it's for this user or if it's a broadcast
-            if (data.userId === user.uid || data.userId === 'broadcast') {
-              return {
-                id: doc.id,
-                title: data.title || 'Notification',
-                message: data.message || '',
-                type: (data.type || 'info') as 'info' | 'success' | 'warning' | 'error',
-                timestamp: data.timestamp instanceof Timestamp ? data.timestamp.toMillis() : Date.now(),
-                read: data.read || false,
+        // Query for user-specific and broadcast notifications
+        const q = query(
+          collection(db, 'notifications'),
+          orderBy('timestamp', 'desc')
+        )
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+          const firebaseNotifications = snapshot.docs
+            .map((doc: any) => {
+              const data = doc.data()
+              // Include if it's for this user or if it's a broadcast
+              if (data.userId === user.uid || data.userId === 'broadcast') {
+                return {
+                  id: doc.id,
+                  title: data.title || 'Notification',
+                  message: data.message || '',
+                  type: (data.type || 'info') as 'info' | 'success' | 'warning' | 'error',
+                  timestamp: data.timestamp instanceof Timestamp ? data.timestamp.toMillis() : Date.now(),
+                  read: data.read || false,
+                }
               }
-            }
-            return null
-          })
-          .filter((n): n is Notification => n !== null)
-        
-        // Combine with default notifications
-        const combined = [...DEFAULT_NOTIFICATIONS, ...firebaseNotifications]
-        const viewed = new Set(viewedNotifications)
-        const filtered = combined.filter(n => !viewed.has(n.id))
-        setNotifications(filtered)
-      }, (error) => {
-        console.error('Error fetching notifications from Firebase:', error)
-      })
+              return null
+            })
+            .filter((n: any): n is Notification => n !== null)
+          
+          // Combine with default notifications
+          const combined = [...DEFAULT_NOTIFICATIONS, ...firebaseNotifications]
+          const viewed = new Set(viewedNotifications)
+          const filtered = combined.filter(n => !viewed.has(n.id))
+          setNotifications(filtered)
+        }, (error: any) => {
+          console.error('Error fetching notifications from Firebase:', error)
+        })
 
-      return () => unsubscribe()
-    } catch (error) {
-      console.error('Error setting up Firebase notifications listener:', error)
+        return () => unsubscribe()
+      } catch (error) {
+        console.error('Error setting up Firebase notifications listener:', error)
+      }
     }
+
+    setupFirebaseListener()
   }, [user, isClient, viewedNotifications])
 
   const addNotification = useCallback(
