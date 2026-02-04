@@ -1,15 +1,43 @@
 'use client'
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+  ReactNode,
+} from 'react'
 import { Bell, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { usePathname } from 'next/navigation'
 import { useAuth } from './auth-provider'
 
-// Firebase imports are lazy-loaded to support static export
-let firebaseLoaded = false
-let collection: any, query: any, where: any, orderBy: any, onSnapshot: any, Timestamp: any, db: any
+/* ---------------------------------------------
+   Firestore TYPES ONLY (SSG-safe)
+--------------------------------------------- */
+import type {
+  QuerySnapshot,
+  QueryDocumentSnapshot,
+  DocumentData,
+} from 'firebase/firestore'
 
+/* ---------------------------------------------
+   Firebase lazy-loaded bindings
+--------------------------------------------- */
+let firebaseLoaded = false
+let collection: any
+let query: any
+let orderBy: any
+let onSnapshot: any
+let Timestamp: any
+let db: any
+
+const isBrowser = typeof window !== 'undefined'
+
+/* ---------------------------------------------
+   Types
+--------------------------------------------- */
 export interface Notification {
   id: string
   title: string
@@ -21,163 +49,256 @@ export interface Notification {
 
 interface NotificationContextType {
   notifications: Notification[]
-  addNotification: (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => void
+  addNotification: (
+    notification: Omit<Notification, 'id' | 'timestamp' | 'read'>
+  ) => void
   removeNotification: (id: string) => void
   markAsRead: (id: string) => void
   clearAll: () => void
 }
 
-const NotificationContext = createContext<NotificationContextType | undefined>(undefined)
+/* ---------------------------------------------
+   Context
+--------------------------------------------- */
+const NotificationContext =
+  createContext<NotificationContextType | undefined>(undefined)
 
 export function useNotifications() {
-  const context = useContext(NotificationContext)
-  if (!context) {
-    throw new Error('useNotifications must be used within NotificationsProvider')
+  const ctx = useContext(NotificationContext)
+  if (!ctx) {
+    throw new Error(
+      'useNotifications must be used within NotificationsProvider'
+    )
   }
-  return context
+  return ctx
 }
 
+/* ---------------------------------------------
+   Default notifications
+--------------------------------------------- */
 const DEFAULT_NOTIFICATIONS: Notification[] = [
   {
-    id: '1',
+    id: 'welcome-shortcuts',
     title: 'Welcome!',
-    message: 'Version 12.0.2 - Shortcuts are now available. N/n-Next, P/p-Previous ,A/1-Option1, B/2-Option2, C/3-Option3, D/4-Option4,',
+    message:
+      'Version 12.0.2 — Shortcuts added: N/P navigation, A–D or 1–4 for answers.',
     type: 'info',
     timestamp: Date.now(),
     read: false,
   },
   {
-    id: '2',
+    id: 'welcome-google-auth',
     title: 'Welcome!',
-    message: 'Version 12.0.2 - Google OAuth is now supported for authentication. You can now sign in using your Google account for a more seamless experience.',
+    message:
+      'Version 12.0.2 — Google OAuth is now available for faster login.',
     type: 'info',
     timestamp: Date.now(),
     read: false,
   },
 ]
 
-export function NotificationsProvider({ children }: { children: React.ReactNode }) {
+/* ---------------------------------------------
+   Provider
+--------------------------------------------- */
+export function NotificationsProvider({
+  children,
+}: {
+  children: ReactNode
+}) {
   const { user } = useAuth()
-  const [notifications, setNotifications] = React.useState<Notification[]>([])
-  const [isClient, setIsClient] = React.useState(false)
-  const [viewedNotifications, setViewedNotifications] = useState<Set<string>>(new Set())
 
-  React.useEffect(() => {
-    // Initialize on client only
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [viewedNotifications, setViewedNotifications] = useState<Set<string>>(
+    new Set<string>()
+  )
+  const [isClient, setIsClient] = useState(false)
+
+  /* -----------------------------------------
+     Init client + defaults
+  ----------------------------------------- */
+  useEffect(() => {
+    if (!isBrowser) return
+
     setIsClient(true)
-    // Load viewed notifications from localStorage
+
     const stored = localStorage.getItem('viewed_notifications')
-    const viewed = stored ? new Set(JSON.parse(stored)) : new Set<string>()
+    const parsed: string[] = stored ? JSON.parse(stored) : []
+    const viewed = new Set<string>(parsed)
+
     setViewedNotifications(viewed)
 
-    // Filter out already viewed notifications
-    const unviewedNotifications = DEFAULT_NOTIFICATIONS.filter(n => !viewed.has(n.id))
-    setNotifications(unviewedNotifications)
+    setNotifications(
+      DEFAULT_NOTIFICATIONS.filter(n => !viewed.has(n.id))
+    )
   }, [])
 
-  // Fetch notifications from Firebase (lazy-loaded)
+  /* -----------------------------------------
+     Firebase listener
+  ----------------------------------------- */
   useEffect(() => {
     if (!user || !isClient) return
 
-    const setupFirebaseListener = async () => {
+    let unsubscribe: (() => void) | undefined
+
+    ;(async () => {
       try {
-        // Lazy load Firebase
         if (!firebaseLoaded) {
-          const firebaseModule = await import('firebase/firestore')
-          collection = firebaseModule.collection
-          query = firebaseModule.query
-          where = firebaseModule.where
-          orderBy = firebaseModule.orderBy
-          onSnapshot = firebaseModule.onSnapshot
-          Timestamp = firebaseModule.Timestamp
+          const firestore = await import('firebase/firestore')
+          collection = firestore.collection
+          query = firestore.query
+          orderBy = firestore.orderBy
+          onSnapshot = firestore.onSnapshot
+          Timestamp = firestore.Timestamp
+
           const { getFirebaseDb } = await import('@/lib/firebase')
           db = await getFirebaseDb()
           firebaseLoaded = true
         }
 
-        // Query for user-specific and broadcast notifications
         const q = query(
           collection(db, 'notifications'),
           orderBy('timestamp', 'desc')
         )
 
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-          const firebaseNotifications = snapshot.docs
-            .map((doc: any) => {
-              const data = doc.data()
-              // Include if it's for this user or if it's a broadcast
-              if (data.userId === user.uid || data.userId === 'broadcast') {
-                return {
-                  id: doc.id,
-                  title: data.title || 'Notification',
-                  message: data.message || '',
-                  type: (data.type || 'info') as 'info' | 'success' | 'warning' | 'error',
-                  timestamp: data.timestamp instanceof Timestamp ? data.timestamp.toMillis() : Date.now(),
-                  read: data.read || false,
-                }
-              }
-              return null
-            })
-            .filter((n: any): n is Notification => n !== null)
-          
-          // Combine with default notifications
-          const combined = [...DEFAULT_NOTIFICATIONS, ...firebaseNotifications]
-          const viewed = new Set(viewedNotifications)
-          const filtered = combined.filter(n => !viewed.has(n.id))
-          setNotifications(filtered)
-        }, (error: any) => {
-          console.error('Error fetching notifications from Firebase:', error)
-        })
+        unsubscribe = onSnapshot(
+          q,
+          (snapshot: QuerySnapshot<DocumentData>) => {
+            if (!isBrowser) return
 
-        return () => unsubscribe()
-      } catch (error) {
-        console.error('Error setting up Firebase notifications listener:', error)
+            const stored = localStorage.getItem('viewed_notifications')
+            const parsed: string[] = stored ? JSON.parse(stored) : []
+            const viewed = new Set<string>(parsed)
+
+            const firebaseNotifications: Notification[] =
+              snapshot.docs
+                .map(
+                  (
+                    doc: QueryDocumentSnapshot<DocumentData>
+                  ): Notification | null => {
+                    const data = doc.data()
+
+                    if (
+                      data.userId !== user.uid &&
+                      data.userId !== 'broadcast'
+                    ) {
+                      return null
+                    }
+
+                    return {
+                      id: doc.id,
+                      title: data.title ?? 'Notification',
+                      message: data.message ?? '',
+                      type:
+                        (data.type ??
+                          'info') as Notification['type'],
+                      timestamp:
+                        data.timestamp?.toMillis?.() ??
+                        Date.now(),
+                      read: viewed.has(doc.id),
+                    }
+                  }
+                )
+                .filter(
+                  (n): n is Notification => n !== null
+                )
+
+            const merged = [
+              ...DEFAULT_NOTIFICATIONS,
+              ...firebaseNotifications,
+            ].filter(n => !viewed.has(n.id))
+
+            setNotifications(merged)
+          }
+        )
+      } catch (err) {
+        console.error('Notification listener error:', err)
       }
+    })()
+
+    return () => {
+      if (unsubscribe) unsubscribe()
     }
+  }, [user, isClient])
 
-    setupFirebaseListener()
-  }, [user, isClient, viewedNotifications])
+  /* -----------------------------------------
+     Helpers
+  ----------------------------------------- */
+  const persistViewed = (id: string) => {
+    if (!isBrowser) return
 
+    const updated = new Set<string>(viewedNotifications)
+    updated.add(id)
+
+    setViewedNotifications(updated)
+    localStorage.setItem(
+      'viewed_notifications',
+      JSON.stringify([...updated])
+    )
+  }
+
+  /* -----------------------------------------
+     Actions
+  ----------------------------------------- */
   const addNotification = useCallback(
-    (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => {
+    (
+      notification: Omit<Notification, 'id' | 'timestamp' | 'read'>
+    ) => {
       const newNotification: Notification = {
         ...notification,
-        id: Date.now().toString(),
+        id: crypto.randomUUID(),
         timestamp: Date.now(),
         read: false,
       }
-      setNotifications((prev) => [newNotification, ...(prev || [])])
+
+      setNotifications(prev => [newNotification, ...prev])
     },
     []
   )
 
-  const removeNotification = useCallback((id: string) => {
-    setNotifications((prev) => (prev || []).filter((n) => n.id !== id))
-    // Mark as viewed in localStorage
-    const updated = new Set(viewedNotifications)
-    updated.add(id)
-    setViewedNotifications(updated)
-    localStorage.setItem('viewed_notifications', JSON.stringify(Array.from(updated)))
-  }, [viewedNotifications])
+  const removeNotification = useCallback(
+    (id: string) => {
+      setNotifications(prev => prev.filter(n => n.id !== id))
+      persistViewed(id)
+    },
+    [viewedNotifications]
+  )
 
-  const markAsRead = useCallback((id: string) => {
-    setNotifications((prev) =>
-      (prev || []).map((n) => (n.id === id ? { ...n, read: true } : n))
-    )
-    // Mark as viewed in localStorage
-    const updated = new Set(viewedNotifications)
-    updated.add(id)
-    setViewedNotifications(updated)
-    localStorage.setItem('viewed_notifications', JSON.stringify(Array.from(updated)))
-  }, [viewedNotifications])
+  const markAsRead = useCallback(
+    (id: string) => {
+      setNotifications(prev =>
+        prev.map(n =>
+          n.id === id ? { ...n, read: true } : n
+        )
+      )
+      persistViewed(id)
+    },
+    [viewedNotifications]
+  )
 
   const clearAll = useCallback(() => {
+    if (!isBrowser) return
+
+    const updated = new Set<string>(viewedNotifications)
+    notifications.forEach(n => updated.add(n.id))
+
+    setViewedNotifications(updated)
+    localStorage.setItem(
+      'viewed_notifications',
+      JSON.stringify([...updated])
+    )
+
     setNotifications([])
-  }, [])
+  }, [notifications, viewedNotifications])
 
   return (
     <NotificationContext.Provider
-      value={{ notifications: notifications || [], addNotification, removeNotification, markAsRead, clearAll }}
+      value={{
+        notifications,
+        addNotification,
+        removeNotification,
+        markAsRead,
+        clearAll,
+      }}
     >
       {children}
       {isClient && <NotificationCenter />}
@@ -185,53 +306,31 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   )
 }
 
+/* ---------------------------------------------
+   Notification Center UI
+--------------------------------------------- */
 function NotificationCenter() {
-  const { notifications, removeNotification, markAsRead } = useNotifications()
+  const { notifications, removeNotification, markAsRead } =
+    useNotifications()
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
-  
-  // Only show notifications on homepage
-  const isHomepage = pathname === '/'
-  
-  if (!isHomepage) {
-    return null
-  }
-  
-  const unreadCount = notifications.filter((n) => !n.read).length
 
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'success':
-        return 'bg-green-50 border-green-200'
-      case 'warning':
-        return 'bg-yellow-50 border-yellow-200'
-      case 'error':
-        return 'bg-red-50 border-red-200'
-      default:
-        return 'bg-blue-50 border-blue-200'
-    }
-  }
+  if (pathname !== '/') return null
 
-  const getTypeTextColor = (type: string) => {
-    switch (type) {
-      case 'success':
-        return 'text-green-800'
-      case 'warning':
-        return 'text-yellow-800'
-      case 'error':
-        return 'text-red-800'
-      default:
-        return 'text-blue-800'
-    }
+  const unreadCount = notifications.filter(n => !n.read).length
+
+  const bgByType: Record<Notification['type'], string> = {
+    info: 'bg-blue-50 border-blue-200',
+    success: 'bg-green-50 border-green-200',
+    warning: 'bg-yellow-50 border-yellow-200',
+    error: 'bg-red-50 border-red-200',
   }
 
   return (
     <div className="fixed bottom-6 right-6 z-50">
-      {/* Notification Bell Button */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="relative p-3 bg-primary text-primary-foreground rounded-full shadow-lg hover:shadow-xl transition-shadow"
-        data-tour="notification-bell"
+        onClick={() => setIsOpen(v => !v)}
+        className="relative p-3 bg-primary text-primary-foreground rounded-full shadow-lg"
       >
         <Bell className="w-6 h-6" />
         {unreadCount > 0 && (
@@ -241,10 +340,9 @@ function NotificationCenter() {
         )}
       </button>
 
-      {/* Notification Dropdown */}
       {isOpen && (
         <div className="absolute bottom-16 right-0 w-96 max-h-96 bg-background border rounded-lg shadow-xl overflow-y-auto">
-          <div className="sticky top-0 bg-card border-b p-4 flex items-center justify-between">
+          <div className="sticky top-0 bg-card border-b p-4 flex justify-between">
             <h3 className="font-semibold">Notifications</h3>
             <Button
               variant="ghost"
@@ -260,41 +358,37 @@ function NotificationCenter() {
               No notifications
             </div>
           ) : (
-            <div className="divide-y">
-              {notifications.map((notification) => (
-                <div
-                  key={notification.id}
-                  className={`p-4 border-l-4 cursor-pointer hover:bg-muted transition ${getTypeColor(
-                    notification.type
-                  )} ${notification.read ? 'opacity-60' : ''}`}
-                  onClick={() => markAsRead(notification.id)}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h4 className={`font-semibold ${getTypeTextColor(notification.type)}`}>
-                        {notification.title}
-                      </h4>
-                      <p className="text-sm mt-1 text-muted-foreground">
-                        {notification.message}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        {new Date(notification.timestamp).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
-                      </p>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        removeNotification(notification.id)
-                      }}
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
+            notifications.map(n => (
+              <div
+                key={n.id}
+                onClick={() => markAsRead(n.id)}
+                className={`p-4 border-l-4 cursor-pointer ${
+                  bgByType[n.type]
+                } ${n.read ? 'opacity-60' : ''}`}
+              >
+                <div className="flex justify-between">
+                  <div>
+                    <h4 className="font-semibold">{n.title}</h4>
+                    <p className="text-sm mt-1 text-muted-foreground">
+                      {n.message}
+                    </p>
+                    <p className="text-xs mt-2 text-muted-foreground">
+                      {new Date(n.timestamp).toLocaleTimeString()}
+                    </p>
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={e => {
+                      e.stopPropagation()
+                      removeNotification(n.id)
+                    }}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))
           )}
         </div>
       )}
