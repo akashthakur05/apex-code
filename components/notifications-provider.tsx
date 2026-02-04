@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 import { Bell, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { usePathname } from 'next/navigation'
+import { useAuth } from './auth-provider'
 
 // Firebase imports are lazy-loaded to support static export
 let firebaseLoaded = false
@@ -56,10 +57,10 @@ const DEFAULT_NOTIFICATIONS: Notification[] = [
 ]
 
 export function NotificationsProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth()
   const [notifications, setNotifications] = React.useState<Notification[]>([])
   const [isClient, setIsClient] = React.useState(false)
   const [viewedNotifications, setViewedNotifications] = useState<Set<string>>(new Set())
-  const [user, setUser] = useState<any>(null)
 
   React.useEffect(() => {
     // Initialize on client only
@@ -72,20 +73,6 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     // Filter out already viewed notifications
     const unviewedNotifications = DEFAULT_NOTIFICATIONS.filter(n => !viewed.has(n.id))
     setNotifications(unviewedNotifications)
-
-    // Try to lazy-load and get user from auth provider
-    const loadUser = async () => {
-      try {
-        const { useAuth: useAuthImport } = await import('./auth-provider')
-        const auth = useAuthImport()
-        if (auth?.user) {
-          setUser(auth.user)
-        }
-      } catch (error) {
-        console.error('Failed to load auth provider:', error)
-      }
-    }
-    loadUser()
   }, [])
 
   // Fetch notifications from Firebase (lazy-loaded)
