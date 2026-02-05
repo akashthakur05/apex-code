@@ -2,13 +2,16 @@
 
 import Link from "next/link"
 import { sectionNameMap, coachingInstitutes } from '@/lib/mock-data'
-import { ChevronLeft, ChevronRight, Lightbulb, Settings, Download } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Lightbulb, Settings, Download, BookOpen } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import HTMLRenderer from './html-renderer'
 import { Card } from './ui/card'
 import SolutionModal from './solution-modal'
+import SavedQuestionsModal from './saved-questions-modal'
 import { useExamKeyboard } from "@/hooks/useExamKeyboard"
+import { useToast } from '@/components/ui/use-toast'
+import { saveQuestion, isSavedQuestion } from '@/lib/firebase-saved-questions'
 import * as htmlToImage from "html-to-image"
 
 interface Props {
@@ -85,11 +88,15 @@ const triggerVibration = (pattern: number | number[]) => {
 export default function SectionViewer({ coachingId, sectionId, questionlist }: Props) {
   const searchParams = useSearchParams()
   const router = useRouter()
+  const { toast } = useToast()
   const wrongQuestionRef = useRef<HTMLDivElement>(null)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [selectedOption, setSelectedOption] = useState<number | null>(null)
   const [showSolution, setShowSolution] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [showSavedQuestionsModal, setShowSavedQuestionsModal] = useState(false)
+  const [savedQuestionIds, setSavedQuestionIds] = useState<Set<string>>(new Set())
+  const [savingQuestion, setSavingQuestion] = useState(false)
   const [quickModeConfig, setQuickModeConfig] = useState<QuickModeConfig>({
     enabled: false,
     autoNextEnabled: true,
