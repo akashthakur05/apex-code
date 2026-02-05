@@ -2,14 +2,17 @@
 
 import { TestTitle, CoachingInstitute, Question } from '@/lib/types'
 import Link from 'next/link'
-import { ChevronLeft, ChevronRight, Menu, X, Printer, Share2, Bookmark } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Menu, X, Printer, Share2, Bookmark, BookOpen } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import SolutionModal from './solution-modal'
 import HTMLRenderer from './html-renderer'
+import SavedQuestionsModal from './saved-questions-modal'
 import { getSectionName } from '@/lib/mock-data'
 import { useState, useEffect } from 'react'
 import * as htmlToImage from "html-to-image"
 import { isBookmarked, addBookmark, removeBookmark, markTestComplete, unmarkTestComplete, isTestComplete as checkTestComplete } from '@/lib/bookmark-storage'
+import { saveQuestion, isSavedQuestion } from '@/lib/firebase-saved-questions'
+import { useToast } from '@/components/ui/use-toast'
 // import { addBookmark, removeBookmark, isBookmarked, markTestComplete, unmarkTestComplete, isTestComplete as checkTestComplete } from '@/lib/bookmark-storage'
 
 interface Props {
@@ -21,6 +24,7 @@ interface Props {
 export default function QuestionViewer({ test, coaching, preloadedQuestions }: Props) {
   console.log('Preloaded Questions:', preloadedQuestions, coaching)
   const questions = preloadedQuestions || []
+  const { toast } = useToast()
   const [currentIndex, setCurrentIndex] = useState(0)
   const [selectedOption, setSelectedOption] = useState<number | null>(null)
   const [showSolution, setShowSolution] = useState(false)
@@ -32,6 +36,9 @@ export default function QuestionViewer({ test, coaching, preloadedQuestions }: P
   const [bookmarkedQuestions, setBookmarkedQuestions] = useState<Set<string>>(new Set())
   const [showShareMenu, setShowShareMenu] = useState(false)
   const [isTestComplete, setIsTestComplete] = useState(false)
+  const [showSavedQuestionsModal, setShowSavedQuestionsModal] = useState(false)
+  const [savedQuestionIds, setSavedQuestionIds] = useState<Set<string>>(new Set())
+  const [savingQuestion, setSavingQuestion] = useState(false)
 
   const currentQuestion = questions[currentIndex]
   const currentSection = currentQuestion.section_id || 'general'
@@ -68,6 +75,25 @@ export default function QuestionViewer({ test, coaching, preloadedQuestions }: P
   useEffect(() => {
     setIsTestComplete(checkTestComplete(coaching.id, test.id))
   }, [coaching.id, test.id])
+
+  useEffect(() => {
+    // Load saved questions from Firebase on mount
+    const loadSavedQuestions = async () => {
+      try {
+        const saved = new Set<string>()
+        for (const q of preloadedQuestions || []) {
+          const isSaved = await isSavedQuestion(q.id, coaching.id)
+          if (isSaved) {
+            saved.add(q.id)
+          }
+        }
+        setSavedQuestionIds(saved)
+      } catch (error) {
+        console.error('Error loading saved questions:', error)
+      }
+    }
+    loadSavedQuestions()
+  }, [preloadedQuestions, coaching.id])
 
   useEffect(() => {
     console.log('Setting up keydown listener')
@@ -451,6 +477,42 @@ ${pageUrl}
     }
   }
 
+  const handleSaveQuestion = async () => {
+    try {
+      setSavingQuestion(true)
+      const isSaved = savedQuestionIds.has(currentQuestion.id)
+
+      if (isSaved) {
+        // Would need to remove from Firebase - for now we'll just toggle the UI
+        setSavedQuestionIds(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(currentQuestion.id)
+          return newSet
+        })
+        toast({
+          title: 'Removed',
+          description: 'Question removed from saved',
+        })
+      } else {
+        await saveQuestion(currentQuestion, coaching.id, test.id)
+        setSavedQuestionIds(prev => new Set(prev).add(currentQuestion.id))
+        toast({
+          title: 'Success',
+          description: 'Question saved successfully',
+        })
+      }
+    } catch (error) {
+      console.error('Error saving question:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to save question',
+        variant: 'destructive',
+      })
+    } finally {
+      setSavingQuestion(false)
+    }
+  }
+
   // Group questions by section
   const groupedBySection = new Map<string, Question[]>()
   questions.forEach((q: Question) => {
@@ -501,6 +563,7 @@ ${pageUrl}
                   <div className="grid grid-cols-4 gap-2">
                     {sectionQuestions.map((q, idx) => {
                       const globalIdx = questions.indexOf(q)
+                      const qNum = globalIdx + 1
                       return (
                         <button
                           key={idx}
@@ -510,12 +573,13 @@ ${pageUrl}
                             setShowSolution(false)
                             setSidebarOpen(false)
                           }}
-                          className={`aspect-square rounded text-xs font-medium transition-all flex items-center justify-center ${currentIndex === globalIdx
+                          className={`min-h-10 min-w-10 rounded font-medium transition-all flex items-center justify-center text-xs md:text-sm px-2 py-1 ${currentIndex === globalIdx
                             ? 'bg-primary text-primary-foreground ring-2 ring-primary'
                             : 'bg-muted hover:bg-muted/80 text-foreground'
                             }`}
+                          title={`Question ${qNum}`}
                         >
-                          {globalIdx + 1}
+                          <span className="truncate">{qNum}</span>
                         </button>
                       )
                     })}
@@ -732,11 +796,28 @@ ${pageUrl}
             </div>
 
             {/* Bookmark and Share Buttons */}
-            <div className="flex justify-between items-start mb-6">
-              <div className="flex-1">
-                {/* existing question content */}
-              </div>
-              <div className="flex gap-2 ml-4">
+            <div className="flex justify-between items-start mb-6 gap-4">
+              <button
+                onClick={() => setShowSavedQuestionsModal(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/90 transition-colors text-sm font-medium"
+                title="View saved questions"
+              >
+                <BookOpen className="w-4 h-4" />
+                <span className="hidden sm:inline">View Saved</span>
+              </button>
+              <div className="flex-1" />
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSaveQuestion}
+                  disabled={savingQuestion}
+                  className={`p-2 rounded-lg transition-colors ${savedQuestionIds.has(currentQuestion.id)
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-muted text-foreground hover:bg-muted/80'
+                    }`}
+                  title="Save question to Firebase"
+                >
+                  <BookOpen className="w-5 h-5" fill={savedQuestionIds.has(currentQuestion.id) ? 'currentColor' : 'none'} />
+                </button>
                 <button
                   onClick={handleBookmark}
                   className={`p-2 rounded-lg transition-colors ${bookmarkedQuestions.has(currentQuestion.id)
@@ -790,6 +871,12 @@ ${pageUrl}
         question={currentQuestion}
         isOpen={showSolution}
         onClose={() => setShowSolution(false)}
+      />
+
+      {/* Saved Questions Modal */}
+      <SavedQuestionsModal
+        isOpen={showSavedQuestionsModal}
+        onClose={() => setShowSavedQuestionsModal(false)}
       />
 
       {/* Print Modal */}

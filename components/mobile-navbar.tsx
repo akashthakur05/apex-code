@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { HelpCircle, LogOut, TrendingUp } from 'lucide-react';
+import { HelpCircle, LogOut, TrendingUp, BookOpen } from 'lucide-react';
 import Link from 'next/link';
 
 export function MobileNavbar() {
@@ -64,6 +64,12 @@ export function MobileNavbar() {
           <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
         </div>
         <DropdownMenuSeparator />
+        <Link href="/saved-questions" className="w-full">
+          <DropdownMenuItem className="cursor-pointer">
+            <BookOpen className="w-4 h-4 mr-2" />
+            <span>Saved Questions</span>
+          </DropdownMenuItem>
+        </Link>
         <Link href="/progress" className="w-full">
           <DropdownMenuItem className="cursor-pointer">
             <TrendingUp className="w-4 h-4 mr-2" />
