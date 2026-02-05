@@ -8,6 +8,9 @@ firebase-debug.log*
 firebase-debug.*.log*
 .next/
 out/
+node_modules/
+.vercel/
+vercel/
 
 
 
