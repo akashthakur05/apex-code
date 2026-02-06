@@ -3,6 +3,7 @@
   "version": "4.1.0",
   "private": true,
   "scripts": {
+    "prebuild": "node script/autoscript.js",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
