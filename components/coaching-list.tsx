@@ -25,9 +25,10 @@ export default function CoachingList() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const response = await fetch('/data.json')
+        const response = await fetch('data.json')
         if (!response.ok) throw new Error('Failed to load data')
         const jsonData = await response.json()
+        console.log('Loaded coaching data:', jsonData)
         setData(jsonData)
       } catch (err) {
         console.error('Error loading coaching data:', err)
@@ -93,7 +94,7 @@ export default function CoachingList() {
                       {institute.name}
                     </h2>
                     <p className="text-sm text-muted-foreground">
-                      {institute.tests.length} Test Series Available
+                      {institute.tests.length}  Test Series Available
                     </p>
                   </div>
                 </Card>

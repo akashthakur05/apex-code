@@ -1,6 +1,7 @@
 'use client'
 import { Phone, Heart } from 'lucide-react';
 import { useEffect } from 'react';
+import { VERSION, BUILD_DATE } from "@/lib/version";
 
 export default function Footer() {
   const version = process.env.NEXT_PUBLIC_APP_VERSION || '0.1.0';
@@ -16,7 +17,7 @@ export default function Footer() {
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           {/* Site Version */}
           <div className="text-sm text-muted-foreground">
-            Site Version: <span className="font-semibold text-foreground">{version}</span>
+            Site Version: <span className="font-semibold text-foreground">{version} -  {VERSION} - {BUILD_DATE}</span>
           </div>
 
           {/* Built By Info */}

@@ -13,6 +13,7 @@ const ROOT = path.join(__dirname, "..");
 const CONFIG_DIR = path.join(ROOT, "config");
 const DATA_DIR = path.join(ROOT, "data");
 const LIB_DIR = path.join(ROOT, "lib");
+const PUBLIC_DATA_JSON_PATH = path.join(ROOT, "public", "data.json");
 
 const SOURCES_PATH = path.join(CONFIG_DIR, "sources.json");
 const MOCK_TS_PATH = path.join(LIB_DIR, "mock-data.ts");
@@ -193,8 +194,9 @@ async function updateDataJson(source, tests) {
   institute.tests = sortById(
   mergeTests(institute.tests, tests)
 );
-
+  // Not Removing due to backward compatibility with coaching-list.tsx which is using test length to show number of tests available for each institute
   await write(DATA_JSON_PATH, stringify(data));
+  await write(PUBLIC_DATA_JSON_PATH, stringify(data));
   log("WRITE", `data.json updated → ${source.folder_name}`);
 }
 
