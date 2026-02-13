@@ -41,9 +41,10 @@ export default function HTMLRenderer({ html }: Props) {
   }, [cleanHtml])
 
   return (
-    <div
-      ref={ref}
-      className="prose prose-sm dark:prose-invert max-w-none text-foreground"
-    />
+<div
+  ref={ref}
+  className="question-container text-foreground [&_img]:inline-block [&_img]:align-middle [&_p]:m-0"
+/>
+
   )
 }
