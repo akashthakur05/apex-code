@@ -61,6 +61,6 @@ export function useExamKeyboard({
     }
 
     window.addEventListener("keydown", handler)
-    return () => window.removeEventListener("keydown", handler)
+    return () => {console.log("Removing keydown listener");window.removeEventListener("keydown", handler)}
   }, []) // ✅ FIXED, CONSTANT DEP ARRAY
 }

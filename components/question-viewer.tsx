@@ -14,6 +14,8 @@ import { isBookmarked, addBookmark, removeBookmark, markTestComplete, unmarkTest
 import { saveQuestion, isSavedQuestion } from '@/lib/firebase-saved-questions'
 import { useToast } from '@/components/ui/use-toast'
 // import { addBookmark, removeBookmark, isBookmarked, markTestComplete, unmarkTestComplete, isTestComplete as checkTestComplete } from '@/lib/bookmark-storage'
+import { useExamKeyboard } from "@/hooks/useExamKeyboard"
+
 
 interface Props {
   test: TestTitle
@@ -95,25 +97,10 @@ export default function QuestionViewer({ test, coaching, preloadedQuestions }: P
     loadSavedQuestions()
   }, [preloadedQuestions, coaching.id])
 
-  useEffect(() => {
-    console.log('Setting up keydown listener')
-  const handler = (e: { key: string }) => {
-    console.log('Key pressed:', e.key)
-    if (e.key === "n" || e.key === "ArrowRight" || e.key === "N") {
-      handleNextQuestion()
-    }
-    if (e.key === "p" || e.key === "ArrowLeft" || e.key === "P") {
-      handlePrevQuestion()
-    }
-  };
-
-  window.addEventListener("keydown", handler);
-  return () => window.removeEventListener("keydown", handler);
-}, []);
 
   const handleNextQuestion = () => {
     if (currentIndex < questions.length - 1) {
-      setCurrentIndex(currentIndex + 1)
+      setCurrentIndex(prev => prev + 1)
       setSelectedOption(null)
       setShowSolution(false)
     }
@@ -121,7 +108,7 @@ export default function QuestionViewer({ test, coaching, preloadedQuestions }: P
 
   const handlePrevQuestion = () => {
     if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1)
+      setCurrentIndex(prev => prev - 1)
       setSelectedOption(null)
       setShowSolution(false)
     }
@@ -137,6 +124,12 @@ export default function QuestionViewer({ test, coaching, preloadedQuestions }: P
     }
     setPrintModalOpen(true)
   }
+  useExamKeyboard({
+    onNext: handleNextQuestion,
+    onPrev: handlePrevQuestion,
+    onSelectOption: handleOptionClick,
+    isOptionLocked: selectedOption !== null,
+  })
 
   const handlePrintConfirm = () => {
     const printWindow = window.open('', '', 'width=800,height=600')

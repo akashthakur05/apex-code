@@ -31,25 +31,6 @@ interface SessionScore {
   incorrect: number
 }
 
-const keyToOption = (key: string): number | null => {
-  switch (key.toLowerCase()) {
-    case 'a':
-    case '1':
-      return 1
-    case 'b':
-    case '2':
-      return 2
-    case 'c':
-    case '3':
-      return 3
-    case 'd':
-    case '4':
-      return 4
-    default:
-      return null
-  }
-}
-
 const playSound = (type: 'correct' | 'incorrect') => {
   // Create audio context for sound feedback
   const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
