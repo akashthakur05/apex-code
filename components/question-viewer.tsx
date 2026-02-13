@@ -106,13 +106,11 @@ export default function QuestionViewer({ test, coaching, preloadedQuestions }: P
     }
   }
 
-  const handlePrevQuestion = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex(prev => prev - 1)
-      setSelectedOption(null)
-      setShowSolution(false)
-    }
-  }
+const handlePrevQuestion = () => {
+  setCurrentIndex(prev => Math.max(prev - 1, 0))
+  setSelectedOption(null)
+  setShowSolution(false)
+}
 
   const handleOptionClick = (optionNum: number) => {
     setSelectedOption(optionNum)
