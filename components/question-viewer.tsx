@@ -100,7 +100,10 @@ export default function QuestionViewer({ test, coaching, preloadedQuestions }: P
 
   const handleNextQuestion = () => {
     if (currentIndex < questions.length - 1) {
-      setCurrentIndex(prev => prev + 1)
+      setCurrentIndex(prev => {
+        if (prev >= questions.length - 1) return prev
+        return prev + 1
+      })
       setSelectedOption(null)
       setShowSolution(false)
     }
