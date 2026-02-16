@@ -741,8 +741,8 @@ ${pageUrl}
               <div className="mb-8">
                 <div className="flex gap-4">
               <div className="flex-shrink-0 min-w-8 min-h-8 px-2 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm">
-                {currentQuestion.questionNumber || currentIndex + 1}
-              </div>
+                {currentIndex + 1}
+              </div>||
                   <div className="flex-1 min-w-0">
                     <HTMLRenderer html={currentQuestion.question} />
                   </div>
