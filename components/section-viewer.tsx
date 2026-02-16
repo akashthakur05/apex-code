@@ -2,6 +2,8 @@
 
 import Link from "next/link"
 import { sectionNameMap, coachingInstitutes } from '@/lib/mock-data'
+import coachingData from '@/lib/data.json'
+
 import { ChevronLeft, ChevronRight, Lightbulb, Settings, Download, Share2, BookOpen } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
@@ -11,7 +13,7 @@ import SolutionModal from './solution-modal'
 import { useExamKeyboard } from "@/hooks/useExamKeyboard"
 import * as htmlToImage from "html-to-image"
 import { saveLastViewedQuestion, getLastViewedQuestion } from '@/lib/bookmark-storage'
-import { saveQuestion, isSavedQuestion } from '@/lib/firebase-saved-questions'
+import { saveQuestion, isSavedQuestion, addToSavedQuestionsCache, removeFromSavedQuestionsCache } from '@/lib/firebase-saved-questions'
 import { useToast } from '@/hooks/use-toast'
 
 interface Props {
@@ -39,10 +41,10 @@ const playSound = (type: 'correct' | 'incorrect') => {
   const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
   const oscillator = audioContext.createOscillator()
   const gainNode = audioContext.createGain()
-  
+
   oscillator.connect(gainNode)
   gainNode.connect(audioContext.destination)
-  
+
   if (type === 'correct') {
     oscillator.frequency.setValueAtTime(600, audioContext.currentTime)
     oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 0.1)
@@ -97,21 +99,24 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
     const initializeQuestion = () => {
       setMounted(true)
       const questionParam = searchParams.get('question')
-      
+
       if (questionParam) {
         const questionIndex = parseInt(questionParam) - 1 // Convert 1-indexed to 0-indexed
         if (questionIndex >= 0 && questionIndex < questionlist.length) {
           setCurrentIndex(questionIndex)
+          updateUrl(questionIndex)
+          
         }
       } else {
         // Try to get last viewed question for this section
         const lastViewed = getLastViewedQuestion(coachingId, sectionId)
         if (lastViewed !== null && lastViewed >= 0 && lastViewed < questionlist.length) {
           setCurrentIndex(lastViewed)
+          updateUrl(lastViewed)
         }
       }
     }
-    
+
     if (questionlist.length > 0) {
       initializeQuestion()
     }
@@ -121,7 +126,7 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
   const currentQuestion = questionlist[currentIndex]
 
   const sectionName = sectionNameMap[sectionId] || `Section ${sectionId}`
-  const coaching = coachingInstitutes.find(c => c.id === coachingId)
+  const coaching = coachingData.find(c => c.id === coachingId)
 
   // Helper function to get test name from test ID
   const getTestName = (testId: string) => {
@@ -153,11 +158,11 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
     if (!wrongQuestionRef.current) return
 
     try {
-      const dataUrl = await htmlToImage.toPng(wrongQuestionRef.current, { 
+      const dataUrl = await htmlToImage.toPng(wrongQuestionRef.current, {
         quality: 1,
-        pixelRatio: 2 
+        pixelRatio: 2
       })
-      
+
       const link = document.createElement('a')
       link.href = dataUrl
       link.download = `Q${currentIndex + 1}-Wrong-Answer.png`
@@ -172,7 +177,7 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
     if (!currentQuestion) {
       return
     }
-    
+
     try {
       setSavingQuestion(true)
       const isSaved = savedQuestionIds.has(currentQuestion.id)
@@ -184,14 +189,33 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
           newSet.delete(currentQuestion.id)
           return newSet
         })
+        removeFromSavedQuestionsCache(currentQuestion.id, coachingId)
         toast({
           title: 'Removed',
           description: 'Question removed from saved',
         })
       } else {
         // Save to Firebase
+
         await saveQuestion(currentQuestion, coachingId, sectionId)
         setSavedQuestionIds(prev => new Set(prev).add(currentQuestion.id))
+        addToSavedQuestionsCache({
+          id: currentQuestion.id,
+          userId: '',
+          questionId: currentQuestion.id,
+          coachingId: coachingId,
+          testId:       currentQuestion.test_id,
+          question: currentQuestion.question,
+          option_1: currentQuestion.option_1,
+          option_2: currentQuestion.option_2,
+          option_3: currentQuestion.option_3,
+          option_4: currentQuestion.option_4,
+          answer: currentQuestion.answer,
+          section_id: currentQuestion.section_id,
+          positive_marks: +currentQuestion.positive_marks,
+          negative_marks: +currentQuestion.negative_marks,
+          savedAt: { toMillis: () => Date.now() } as any,
+        })
         toast({
           title: 'Success',
           description: 'Question saved successfully',
@@ -213,7 +237,7 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
     try {
       const questionText = `Q${currentIndex + 1}: ${currentQuestion.question}`
       const shareUrl = window.location.href
-      
+
       if (navigator.share) {
         await navigator.share({
           title: 'Question',
@@ -223,11 +247,11 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
       } else {
         // Fallback: download as image
         if (wrongQuestionRef.current) {
-          const dataUrl = await htmlToImage.toPng(wrongQuestionRef.current, { 
+          const dataUrl = await htmlToImage.toPng(wrongQuestionRef.current, {
             quality: 1,
-            pixelRatio: 2 
+            pixelRatio: 2
           })
-          
+
           const link = document.createElement('a')
           link.href = dataUrl
           link.download = `Q${currentIndex + 1}-Question.png`
@@ -242,7 +266,7 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
   const handleOptionClick = (opt: number) => {
     if (selectedOption === null) {
       setSelectedOption(opt)
-      
+
       // Update score in quick mode
       if (quickModeConfig.enabled) {
         const isCorrect = currentQuestion.answer === String(opt)
@@ -279,10 +303,10 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
   // Check if current question is saved (only for current question, not all)
   useEffect(() => {
     let isMounted = true
-    
+
     const checkCurrentQuestionSaved = async () => {
       if (!currentQuestion) return
-      
+
       try {
         const isSaved = await isSavedQuestion(currentQuestion.id, coachingId)
         if (isMounted) {
@@ -300,9 +324,9 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
         console.error('Error checking saved status:', error)
       }
     }
-    
+
     checkCurrentQuestionSaved()
-    
+
     return () => {
       isMounted = false
     }
@@ -351,21 +375,19 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
                 <span>{coaching?.name}</span>
               </div>
             </div>
-            
+
             {/* Quick Mode Toggle */}
             <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={() => setQuickModeConfig(prev => ({ ...prev, enabled: !prev.enabled }))}
-                className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${
-                  quickModeConfig.enabled ? 'bg-primary' : 'bg-muted'
-                }`}
+                className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${quickModeConfig.enabled ? 'bg-primary' : 'bg-muted'
+                  }`}
                 aria-label="Toggle quick mode"
               >
                 <span
-                  className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
-                    quickModeConfig.enabled ? 'translate-x-7' : 'translate-x-1'
-                  }`}
+                  className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${quickModeConfig.enabled ? 'translate-x-7' : 'translate-x-1'
+                    }`}
                 />
               </button>
               <span className="text-sm font-medium whitespace-nowrap">Quick Mode</span>
@@ -386,7 +408,7 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
           {quickModeConfig.enabled && showQuickModeSettings && (
             <div className="mt-4 p-4 rounded-lg bg-muted border border-border space-y-4">
               <h3 className="font-semibold text-sm">Quick Mode Settings</h3>
-              
+
               <div className="space-y-3">
                 <label className="flex items-center gap-3 cursor-pointer">
                   <input
@@ -480,25 +502,25 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
 
       {/* QUESTION */}
       <div className="max-w-4xl mx-auto px-4 py-8 pb-28 md:pb-8">
-          <div className="hidden md:flex justify-between my-4">
-            <button
-              onClick={handlePrev}
-              disabled={currentIndex === 0}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg border bg-card hover:bg-muted disabled:opacity-50"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              Previous
-            </button>
+        <div className="hidden md:flex justify-between my-4">
+          <button
+            onClick={handlePrev}
+            disabled={currentIndex === 0}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border bg-card hover:bg-muted disabled:opacity-50"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            Previous
+          </button>
 
-            <button
-              onClick={handleNext}
-              disabled={currentIndex === totalQuestions - 1}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg border bg-card hover:bg-muted disabled:opacity-50"
-            >
-              Next
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
+          <button
+            onClick={handleNext}
+            disabled={currentIndex === totalQuestions - 1}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border bg-card hover:bg-muted disabled:opacity-50"
+          >
+            Next
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
         <Card className="p-4 md:p-8" ref={wrongQuestionRef}>
           {!currentQuestion ? (
             <div className="flex items-center justify-center py-12">
@@ -506,115 +528,114 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
             </div>
           ) : (
             <>
-          {/* QUESTION HEADER WITH SOLUTION BUTTON */}
-          <div className="mb-8 flex flex-col md:flex-row gap-4 items-start justify-between">
-            <div className="flex gap-4 flex-1 w-full">
-              <div className="flex flex-col gap-2">
-                <div className="min-w-8 min-h-8 px-2 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold flex-shrink-0">
-                  {currentIndex + 1}
-                </div>
-                {currentQuestion && currentQuestion.test_id && (
-                  <span className="text-xs px-2 py-1 rounded bg-muted text-muted-foreground whitespace-nowrap max-w-32 truncate" title={getTestName(currentQuestion.test_id)}>
-                    {getTestName(currentQuestion.test_id)}
-                  </span>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <HTMLRenderer html={currentQuestion.question} />
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2 flex-shrink-0 w-full md:w-auto">
-              {mounted && selectedOption !== null && selectedOption !== Number(currentQuestion.answer) && (
-                <button
-                  onClick={downloadWrongQuestion}
-                  className="flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg bg-orange-50 dark:bg-orange-950 text-orange-600 dark:text-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900 transition whitespace-nowrap text-sm md:text-base"
-                  title="Download this question with correct answer"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>Download</span>
-                </button>
-              )}
-              {mounted && currentQuestion.solution_text && (
-                <button
-                  onClick={() => setShowSolution(true)}
-                  className="flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition whitespace-nowrap text-sm md:text-base"
-                >
-                  <Lightbulb className="w-4 h-4" />
-                  <span>Solution</span>
-                </button>
-              )}
-              {mounted && currentQuestion && (
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleSaveQuestion}
-                    disabled={savingQuestion}
-                    className={`p-2 rounded-lg transition-colors ${
-                      savedQuestionIds.has(currentQuestion.id)
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-muted text-foreground hover:bg-muted/80'
-                    }`}
-                    title="Save question to Firebase"
-                  >
-                    <BookOpen className="w-5 h-5" fill={savedQuestionIds.has(currentQuestion.id) ? 'currentColor' : 'none'} />
-                  </button>
-                  <button
-                    onClick={handleShareQuestion}
-                    className="p-2 rounded-lg bg-muted text-foreground hover:bg-muted/80 transition-colors"
-                    title="Share question"
-                  >
-                    <Share2 className="w-5 h-5" />
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* OPTIONS */}
-          <div className="space-y-3">
-            {[1, 2, 3, 4].map((opt) => {
-              const optionKey = `option_${opt}`
-              const optionText = currentQuestion[optionKey]
-              const isCorrect = currentQuestion.answer === String(opt)
-              const isSelected = selectedOption === opt
-              const revealCorrect =
-                selectedOption !== null && selectedOption !== Number(currentQuestion.answer)
-
-              let borderClass = 'border-border'
-              let textClass = ''
-
-              if (selectedOption !== null) {
-                if (isSelected && !isCorrect) {
-                  borderClass = 'border-red-500 bg-red-50 dark:bg-red-950'
-                  textClass = 'text-red-600'
-                } else if ((isCorrect && revealCorrect) || (isCorrect && isSelected)) {
-                  borderClass = 'border-green-500 bg-green-50 dark:bg-green-950'
-                  textClass = 'text-green-600'
-                }
-              }
-
-              return (
-                <button
-                  key={opt}
-                  onClick={() => handleOptionClick(opt)}
-                  disabled={selectedOption !== null}
-                  className={`w-full text-left p-4 rounded-lg border-2 transition ${borderClass}`}
-                >
-                  <div className="flex gap-3">
-                    <div className={`w-6 h-6 rounded border flex items-center justify-center font-semibold ${textClass}`}>
-                      {String.fromCharCode(64 + opt)}
+              {/* QUESTION HEADER WITH SOLUTION BUTTON */}
+              <div className="mb-8 flex flex-col md:flex-row gap-4 items-start justify-between">
+                <div className="flex gap-4 flex-1 w-full">
+                  <div className="flex flex-col gap-2">
+                    <div className="min-w-8 min-h-8 px-2 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold flex-shrink-0">
+                      {currentIndex + 1}
                     </div>
-                    <div className={`flex-1 ${textClass}`}>
-                      <HTMLRenderer html={optionText} />
-                    </div>
+                    {currentQuestion && currentQuestion.test_id && (
+                      <span className="text-xs px-2 py-1 rounded bg-muted text-muted-foreground whitespace-nowrap max-w-32 truncate" title={getTestName(currentQuestion.test_id)}>
+                        {getTestName(currentQuestion.test_id)}
+                      </span>
+                    )}
                   </div>
-                </button>
-              )
-            })}
-          </div>
+                  <div className="flex-1 min-w-0">
+                    <HTMLRenderer html={currentQuestion.question} />
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2 flex-shrink-0 w-full md:w-auto">
+                  {mounted && selectedOption !== null && selectedOption !== Number(currentQuestion.answer) && (
+                    <button
+                      onClick={downloadWrongQuestion}
+                      className="flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg bg-orange-50 dark:bg-orange-950 text-orange-600 dark:text-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900 transition whitespace-nowrap text-sm md:text-base"
+                      title="Download this question with correct answer"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span>Download</span>
+                    </button>
+                  )}
+                  {mounted && currentQuestion.solution_text && (
+                    <button
+                      onClick={() => setShowSolution(true)}
+                      className="flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition whitespace-nowrap text-sm md:text-base"
+                    >
+                      <Lightbulb className="w-4 h-4" />
+                      <span>Solution</span>
+                    </button>
+                  )}
+                  {mounted && currentQuestion && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleSaveQuestion}
+                        disabled={savingQuestion}
+                        className={`p-2 rounded-lg transition-colors ${savedQuestionIds.has(currentQuestion.id)
+                            ? 'bg-blue-500 text-white'
+                            : 'bg-muted text-foreground hover:bg-muted/80'
+                          }`}
+                        title="Save question to Firebase"
+                      >
+                        <BookOpen className="w-5 h-5" fill={savedQuestionIds.has(currentQuestion.id) ? 'currentColor' : 'none'} />
+                      </button>
+                      <button
+                        onClick={handleShareQuestion}
+                        className="p-2 rounded-lg bg-muted text-foreground hover:bg-muted/80 transition-colors"
+                        title="Share question"
+                      >
+                        <Share2 className="w-5 h-5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
 
-          <div className="mt-6 pt-4 border-t text-sm text-muted-foreground">
-            Marks: +{currentQuestion.positive_marks} / {currentQuestion.negative_marks}
-          </div>
+              {/* OPTIONS */}
+              <div className="space-y-3">
+                {[1, 2, 3, 4].map((opt) => {
+                  const optionKey = `option_${opt}`
+                  const optionText = currentQuestion[optionKey]
+                  const isCorrect = currentQuestion.answer === String(opt)
+                  const isSelected = selectedOption === opt
+                  const revealCorrect =
+                    selectedOption !== null && selectedOption !== Number(currentQuestion.answer)
+
+                  let borderClass = 'border-border'
+                  let textClass = ''
+
+                  if (selectedOption !== null) {
+                    if (isSelected && !isCorrect) {
+                      borderClass = 'border-red-500 bg-red-50 dark:bg-red-950'
+                      textClass = 'text-red-600'
+                    } else if ((isCorrect && revealCorrect) || (isCorrect && isSelected)) {
+                      borderClass = 'border-green-500 bg-green-50 dark:bg-green-950'
+                      textClass = 'text-green-600'
+                    }
+                  }
+
+                  return (
+                    <button
+                      key={opt}
+                      onClick={() => handleOptionClick(opt)}
+                      disabled={selectedOption !== null}
+                      className={`w-full text-left p-4 rounded-lg border-2 transition ${borderClass}`}
+                    >
+                      <div className="flex gap-3">
+                        <div className={`w-6 h-6 rounded border flex items-center justify-center font-semibold ${textClass}`}>
+                          {String.fromCharCode(64 + opt)}
+                        </div>
+                        <div className={`flex-1 ${textClass}`}>
+                          <HTMLRenderer html={optionText} />
+                        </div>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+
+              <div className="mt-6 pt-4 border-t text-sm text-muted-foreground">
+                Marks: +{currentQuestion.positive_marks} / {currentQuestion.negative_marks}
+              </div>
             </>
           )}
         </Card>

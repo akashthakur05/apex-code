@@ -8,10 +8,10 @@ import SolutionModal from './solution-modal'
 import HTMLRenderer from './html-renderer'
 import SavedQuestionsModal from './saved-questions-modal'
 import { getSectionName } from '@/lib/mock-data'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, use } from 'react'
 import * as htmlToImage from "html-to-image"
 import { isBookmarked, addBookmark, removeBookmark, markTestComplete, unmarkTestComplete, isTestComplete as checkTestComplete } from '@/lib/bookmark-storage'
-import { saveQuestion, isSavedQuestion, isSavedQuestionInCache, addToSavedQuestionsCache, removeFromSavedQuestionsCache } from '@/lib/firebase-saved-questions'
+import { saveQuestion, isSavedQuestion, isSavedQuestionInCache, addToSavedQuestionsCache,  removeFromSavedQuestionsCache } from '@/lib/firebase-saved-questions'
 import { useToast } from '@/components/ui/use-toast'
 // import { addBookmark, removeBookmark, isBookmarked, markTestComplete, unmarkTestComplete, isTestComplete as checkTestComplete } from '@/lib/bookmark-storage'
 import { useExamKeyboard } from "@/hooks/useExamKeyboard"
