@@ -93,22 +93,31 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
 
   // Initialize question from query parameter or last viewed on mount
   useEffect(() => {
-    setMounted(true)
-    const questionParam = searchParams.get('question')
-    
-    if (questionParam) {
-      const questionIndex = parseInt(questionParam) - 1 // Convert 1-indexed to 0-indexed
-      if (questionIndex >= 0 && questionIndex < questionlist.length) {
-        setCurrentIndex(questionIndex)
-      }
-    } else {
-      // Try to get last viewed question for this section
-      const lastViewed = getLastViewedQuestion(coachingId, sectionId)
-      if (lastViewed !== null && lastViewed >= 0 && lastViewed < questionlist.length) {
-        setCurrentIndex(lastViewed)
+    // Use a ref to prevent running this effect multiple times
+    const initializeQuestion = () => {
+      setMounted(true)
+      const questionParam = searchParams.get('question')
+      
+      if (questionParam) {
+        const questionIndex = parseInt(questionParam) - 1 // Convert 1-indexed to 0-indexed
+        if (questionIndex >= 0 && questionIndex < questionlist.length) {
+          setCurrentIndex(questionIndex)
+        }
+      } else {
+        // Try to get last viewed question for this section
+        const lastViewed = getLastViewedQuestion(coachingId, sectionId)
+        console.log('[v0] Last viewed:', lastViewed, 'for section:', sectionId)
+        if (lastViewed !== null && lastViewed >= 0 && lastViewed < questionlist.length) {
+          console.log('[v0] Setting to last viewed:', lastViewed)
+          setCurrentIndex(lastViewed)
+        }
       }
     }
-  }, [searchParams, questionlist.length, coachingId, sectionId])
+    
+    if (questionlist.length > 0) {
+      initializeQuestion()
+    }
+  }, [])
 
   const totalQuestions = questionlist.length
   const currentQuestion = questionlist[currentIndex]
@@ -118,8 +127,12 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
 
   // Helper function to get test name from test ID
   const getTestName = (testId: string) => {
-    if (!coaching) return testId
-    const test = coaching.tests?.find(t => t.id === testId)
+    if (!coaching || !coaching.tests) {
+      console.log('[v0] Coaching data not available, testId:', testId)
+      return testId
+    }
+    const test = coaching.tests.find((t: any) => String(t.id) === String(testId))
+    console.log('[v0] Looking for test:', testId, 'found:', test?.title || 'not found')
     return test?.title || testId
   }
 
@@ -160,9 +173,15 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
   }
 
   const handleSaveQuestion = async () => {
+    if (!currentQuestion) {
+      console.log('[v0] currentQuestion is not available yet')
+      return
+    }
+    
     try {
       setSavingQuestion(true)
       const isSaved = savedQuestionIds.has(currentQuestion.id)
+      console.log('[v0] Saving question:', currentQuestion.id, 'is saved:', isSaved)
 
       if (isSaved) {
         // Remove from saved
@@ -177,6 +196,7 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
         })
       } else {
         // Save to Firebase
+        console.log('[v0] Calling saveQuestion for:', currentQuestion.id)
         await saveQuestion(currentQuestion, coachingId, sectionId)
         setSavedQuestionIds(prev => new Set(prev).add(currentQuestion.id))
         toast({
@@ -263,27 +283,37 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
     saveLastViewedQuestion(coachingId, sectionId, currentIndex)
   }, [currentIndex, coachingId, sectionId])
 
-  // Load saved questions on mount
+  // Load saved questions on mount (once only)
   useEffect(() => {
+    let isMounted = true
+    
     const loadSavedQuestions = async () => {
       try {
+        console.log('[v0] Loading saved questions for', questionlist.length, 'questions')
         const savedIds = new Set<string>()
         for (const question of questionlist) {
           const isSaved = await checkIsSavedQuestion(question.id, coachingId)
-          if (isSaved) {
+          if (isSaved && isMounted) {
             savedIds.add(question.id)
           }
         }
-        setSavedQuestionIds(savedIds)
+        if (isMounted) {
+          console.log('[v0] Loaded', savedIds.size, 'saved questions')
+          setSavedQuestionIds(savedIds)
+        }
       } catch (error) {
         console.error('Error loading saved questions:', error)
       }
     }
 
-    if (mounted && questionlist.length > 0) {
+    if (questionlist.length > 0) {
       loadSavedQuestions()
     }
-  }, [mounted, coachingId, questionlist])
+    
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   // Auto-next effect for quick mode
   useEffect(() => {
@@ -477,6 +507,12 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
             </button>
           </div>
         <Card className="p-4 md:p-8" ref={wrongQuestionRef}>
+          {!currentQuestion ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-muted-foreground">Loading question...</div>
+            </div>
+          ) : (
+            <>
           {/* QUESTION HEADER WITH SOLUTION BUTTON */}
           <div className="mb-8 flex flex-col md:flex-row gap-4 items-start justify-between">
             <div className="flex gap-4 flex-1 w-full">
@@ -484,7 +520,7 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
                 <div className="min-w-8 min-h-8 px-2 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold flex-shrink-0">
                   {currentIndex + 1}
                 </div>
-                {currentQuestion.test_id && (
+                {currentQuestion && currentQuestion.test_id && (
                   <span className="text-xs px-2 py-1 rounded bg-muted text-muted-foreground whitespace-nowrap max-w-32 truncate" title={getTestName(currentQuestion.test_id)}>
                     {getTestName(currentQuestion.test_id)}
                   </span>
@@ -514,7 +550,7 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
                   <span>Solution</span>
                 </button>
               )}
-              {mounted && (
+              {mounted && currentQuestion && (
                 <div className="flex gap-2">
                   <button
                     onClick={handleSaveQuestion}
@@ -586,6 +622,8 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
           <div className="mt-6 pt-4 border-t text-sm text-muted-foreground">
             Marks: +{currentQuestion.positive_marks} / {currentQuestion.negative_marks}
           </div>
+            </>
+          )}
         </Card>
 
         {/* BOTTOM NAV (MOBILE + DESKTOP) */}
