@@ -11,7 +11,7 @@ import SolutionModal from './solution-modal'
 import { useExamKeyboard } from "@/hooks/useExamKeyboard"
 import * as htmlToImage from "html-to-image"
 import { saveLastViewedQuestion, getLastViewedQuestion } from '@/lib/bookmark-storage'
-import { saveQuestion, isSavedQuestion as checkIsSavedQuestion } from '@/lib/firebase-saved-questions'
+import { saveQuestion, isSavedQuestion } from '@/lib/firebase-saved-questions'
 import { useToast } from '@/hooks/use-toast'
 
 interface Props {
@@ -106,9 +106,7 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
       } else {
         // Try to get last viewed question for this section
         const lastViewed = getLastViewedQuestion(coachingId, sectionId)
-        console.log('[v0] Last viewed:', lastViewed, 'for section:', sectionId)
         if (lastViewed !== null && lastViewed >= 0 && lastViewed < questionlist.length) {
-          console.log('[v0] Setting to last viewed:', lastViewed)
           setCurrentIndex(lastViewed)
         }
       }
@@ -128,11 +126,9 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
   // Helper function to get test name from test ID
   const getTestName = (testId: string) => {
     if (!coaching || !coaching.tests) {
-      console.log('[v0] Coaching data not available, testId:', testId)
       return testId
     }
     const test = coaching.tests.find((t: any) => String(t.id) === String(testId))
-    console.log('[v0] Looking for test:', testId, 'found:', test?.title || 'not found')
     return test?.title || testId
   }
 
@@ -174,14 +170,12 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
 
   const handleSaveQuestion = async () => {
     if (!currentQuestion) {
-      console.log('[v0] currentQuestion is not available yet')
       return
     }
     
     try {
       setSavingQuestion(true)
       const isSaved = savedQuestionIds.has(currentQuestion.id)
-      console.log('[v0] Saving question:', currentQuestion.id, 'is saved:', isSaved)
 
       if (isSaved) {
         // Remove from saved
@@ -196,7 +190,6 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
         })
       } else {
         // Save to Firebase
-        console.log('[v0] Calling saveQuestion for:', currentQuestion.id)
         await saveQuestion(currentQuestion, coachingId, sectionId)
         setSavedQuestionIds(prev => new Set(prev).add(currentQuestion.id))
         toast({
@@ -283,37 +276,37 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
     saveLastViewedQuestion(coachingId, sectionId, currentIndex)
   }, [currentIndex, coachingId, sectionId])
 
-  // Load saved questions on mount (once only)
+  // Check if current question is saved (only for current question, not all)
   useEffect(() => {
     let isMounted = true
     
-    const loadSavedQuestions = async () => {
+    const checkCurrentQuestionSaved = async () => {
+      if (!currentQuestion) return
+      
       try {
-        console.log('[v0] Loading saved questions for', questionlist.length, 'questions')
-        const savedIds = new Set<string>()
-        for (const question of questionlist) {
-          const isSaved = await checkIsSavedQuestion(question.id, coachingId)
-          if (isSaved && isMounted) {
-            savedIds.add(question.id)
-          }
-        }
+        const isSaved = await isSavedQuestion(currentQuestion.id, coachingId)
         if (isMounted) {
-          console.log('[v0] Loaded', savedIds.size, 'saved questions')
-          setSavedQuestionIds(savedIds)
+          setSavedQuestionIds(prev => {
+            const newSet = new Set(prev)
+            if (isSaved) {
+              newSet.add(currentQuestion.id)
+            } else {
+              newSet.delete(currentQuestion.id)
+            }
+            return newSet
+          })
         }
       } catch (error) {
-        console.error('Error loading saved questions:', error)
+        console.error('Error checking saved status:', error)
       }
     }
-
-    if (questionlist.length > 0) {
-      loadSavedQuestions()
-    }
+    
+    checkCurrentQuestionSaved()
     
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [currentQuestion?.id, coachingId])
 
   // Auto-next effect for quick mode
   useEffect(() => {
