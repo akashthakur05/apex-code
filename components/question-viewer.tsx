@@ -63,46 +63,66 @@ export default function QuestionViewer({ test, coaching, preloadedQuestions }: P
     return () => window.removeEventListener('scroll', handleScroll)
   }, [lastScrollY])
 
+  // Check if current question is bookmarked when navigating
   useEffect(() => {
-    // Load bookmarks on mount
-    const bookmarks = new Set()
-    preloadedQuestions?.forEach(q => {
-      if (isBookmarked(q.id, coaching.id)) {
-        bookmarks.add(q.id)
+    if (!currentQuestion) return
+    
+    const isCurrentBookmarked = isBookmarked(currentQuestion.id, coaching.id)
+    setBookmarkedQuestions(prev => {
+      const newSet = new Set(prev)
+      if (isCurrentBookmarked) {
+        newSet.add(currentQuestion.id)
+      } else {
+        newSet.delete(currentQuestion.id)
       }
+      return newSet as any
     })
-    setBookmarkedQuestions(bookmarks as any)
-  }, [preloadedQuestions, coaching.id])
+  }, [currentQuestion?.id, coaching.id])
 
   useEffect(() => {
     setIsTestComplete(checkTestComplete(coaching.id, test.id))
   }, [coaching.id, test.id])
 
+  // Check if current question is saved when navigating
   useEffect(() => {
-    // Load saved questions from cache or Firebase on mount
-    const loadSavedQuestions = async () => {
+    let isMounted = true
+    
+    const checkCurrentQuestionSaved = async () => {
+      if (!currentQuestion) return
+      
       try {
-        const saved = new Set<string>()
-        for (const q of preloadedQuestions || []) {
-          // Try cache first for performance
-          const inCache = isSavedQuestionInCache(q.id, coaching.id)
-          if (inCache) {
-            saved.add(q.id)
-          } else {
-            // Fall back to Firebase if not in cache
-            const isSaved = await isSavedQuestion(q.id, coaching.id)
-            if (isSaved) {
-              saved.add(q.id)
-            }
+        // Try cache first for performance
+        const inCache = isSavedQuestionInCache(currentQuestion.id, coaching.id)
+        if (inCache) {
+          if (isMounted) {
+            setSavedQuestionIds(prev => new Set(prev).add(currentQuestion.id))
+          }
+        } else {
+          // Fall back to Firebase if not in cache
+          const isSaved = await isSavedQuestion(currentQuestion.id, coaching.id)
+          if (isMounted) {
+            setSavedQuestionIds(prev => {
+              const newSet = new Set(prev)
+              if (isSaved) {
+                newSet.add(currentQuestion.id)
+              } else {
+                newSet.delete(currentQuestion.id)
+              }
+              return newSet
+            })
           }
         }
-        setSavedQuestionIds(saved)
       } catch (error) {
-        console.error('Error loading saved questions:', error)
+        console.error('Error checking saved question:', error)
       }
     }
-    loadSavedQuestions()
-  }, [preloadedQuestions, coaching.id])
+    
+    checkCurrentQuestionSaved()
+    
+    return () => {
+      isMounted = false
+    }
+  }, [currentQuestion?.id, coaching.id])
 
 
   const handleNextQuestion = () => {
