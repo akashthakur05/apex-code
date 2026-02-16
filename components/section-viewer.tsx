@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { sectionNameMap, coachingInstitutes } from '@/lib/mock-data'
-import { ChevronLeft, ChevronRight, Lightbulb, Settings, Download } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Lightbulb, Settings, Download, Share2, BookOpen } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import HTMLRenderer from './html-renderer'
@@ -10,6 +10,9 @@ import { Card } from './ui/card'
 import SolutionModal from './solution-modal'
 import { useExamKeyboard } from "@/hooks/useExamKeyboard"
 import * as htmlToImage from "html-to-image"
+import { saveLastViewedQuestion, getLastViewedQuestion } from '@/lib/bookmark-storage'
+import { saveQuestion, isSavedQuestion as checkIsSavedQuestion } from '@/lib/firebase-saved-questions'
+import { useToast } from '@/hooks/use-toast'
 
 interface Props {
   coachingId: string
@@ -66,11 +69,14 @@ const triggerVibration = (pattern: number | number[]) => {
 export default function SectionViewer({ coachingId, sectionId, questionlist }: Props) {
   const searchParams = useSearchParams()
   const router = useRouter()
+  const { toast } = useToast()
   const wrongQuestionRef = useRef<HTMLDivElement>(null)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [selectedOption, setSelectedOption] = useState<number | null>(null)
   const [showSolution, setShowSolution] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [savedQuestionIds, setSavedQuestionIds] = useState<Set<string>>(new Set())
+  const [savingQuestion, setSavingQuestion] = useState(false)
   const [quickModeConfig, setQuickModeConfig] = useState<QuickModeConfig>({
     enabled: false,
     autoNextEnabled: true,
@@ -85,23 +91,37 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
   })
   const [showQuickModeSettings, setShowQuickModeSettings] = useState(false)
 
-  // Initialize question from query parameter on mount
+  // Initialize question from query parameter or last viewed on mount
   useEffect(() => {
     setMounted(true)
     const questionParam = searchParams.get('question')
+    
     if (questionParam) {
       const questionIndex = parseInt(questionParam) - 1 // Convert 1-indexed to 0-indexed
       if (questionIndex >= 0 && questionIndex < questionlist.length) {
         setCurrentIndex(questionIndex)
       }
+    } else {
+      // Try to get last viewed question for this section
+      const lastViewed = getLastViewedQuestion(coachingId, sectionId)
+      if (lastViewed !== null && lastViewed >= 0 && lastViewed < questionlist.length) {
+        setCurrentIndex(lastViewed)
+      }
     }
-  }, [searchParams, questionlist.length])
+  }, [searchParams, questionlist.length, coachingId, sectionId])
 
   const totalQuestions = questionlist.length
   const currentQuestion = questionlist[currentIndex]
 
   const sectionName = sectionNameMap[sectionId] || `Section ${sectionId}`
   const coaching = coachingInstitutes.find(c => c.id === coachingId)
+
+  // Helper function to get test name from test ID
+  const getTestName = (testId: string) => {
+    if (!coaching) return testId
+    const test = coaching.tests?.find(t => t.id === testId)
+    return test?.title || testId
+  }
 
   // Update URL when question index changes
   const updateUrl = (index: number) => {
@@ -139,6 +159,73 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
     }
   }
 
+  const handleSaveQuestion = async () => {
+    try {
+      setSavingQuestion(true)
+      const isSaved = savedQuestionIds.has(currentQuestion.id)
+
+      if (isSaved) {
+        // Remove from saved
+        setSavedQuestionIds(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(currentQuestion.id)
+          return newSet
+        })
+        toast({
+          title: 'Removed',
+          description: 'Question removed from saved',
+        })
+      } else {
+        // Save to Firebase
+        await saveQuestion(currentQuestion, coachingId, sectionId)
+        setSavedQuestionIds(prev => new Set(prev).add(currentQuestion.id))
+        toast({
+          title: 'Success',
+          description: 'Question saved successfully',
+        })
+      }
+    } catch (error) {
+      console.error('Error saving question:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to save question',
+        variant: 'destructive',
+      })
+    } finally {
+      setSavingQuestion(false)
+    }
+  }
+
+  const handleShareQuestion = async () => {
+    try {
+      const questionText = `Q${currentIndex + 1}: ${currentQuestion.question}`
+      const shareUrl = window.location.href
+      
+      if (navigator.share) {
+        await navigator.share({
+          title: 'Question',
+          text: questionText,
+          url: shareUrl,
+        })
+      } else {
+        // Fallback: download as image
+        if (wrongQuestionRef.current) {
+          const dataUrl = await htmlToImage.toPng(wrongQuestionRef.current, { 
+            quality: 1,
+            pixelRatio: 2 
+          })
+          
+          const link = document.createElement('a')
+          link.href = dataUrl
+          link.download = `Q${currentIndex + 1}-Question.png`
+          link.click()
+        }
+      }
+    } catch (error) {
+      console.error('Error sharing question:', error)
+    }
+  }
+
   const handleOptionClick = (opt: number) => {
     if (selectedOption === null) {
       setSelectedOption(opt)
@@ -172,7 +259,31 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
 
   useEffect(() => {
     updateUrl(currentIndex)
-  }, [currentIndex])
+    // Save last viewed question to localStorage
+    saveLastViewedQuestion(coachingId, sectionId, currentIndex)
+  }, [currentIndex, coachingId, sectionId])
+
+  // Load saved questions on mount
+  useEffect(() => {
+    const loadSavedQuestions = async () => {
+      try {
+        const savedIds = new Set<string>()
+        for (const question of questionlist) {
+          const isSaved = await checkIsSavedQuestion(question.id, coachingId)
+          if (isSaved) {
+            savedIds.add(question.id)
+          }
+        }
+        setSavedQuestionIds(savedIds)
+      } catch (error) {
+        console.error('Error loading saved questions:', error)
+      }
+    }
+
+    if (mounted && questionlist.length > 0) {
+      loadSavedQuestions()
+    }
+  }, [mounted, coachingId, questionlist])
 
   // Auto-next effect for quick mode
   useEffect(() => {
@@ -369,8 +480,15 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
           {/* QUESTION HEADER WITH SOLUTION BUTTON */}
           <div className="mb-8 flex flex-col md:flex-row gap-4 items-start justify-between">
             <div className="flex gap-4 flex-1 w-full">
-              <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold flex-shrink-0 mt-1">
-                {currentIndex + 1}
+              <div className="flex flex-col gap-2">
+                <div className="min-w-8 min-h-8 px-2 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold flex-shrink-0">
+                  {currentIndex + 1}
+                </div>
+                {currentQuestion.test_id && (
+                  <span className="text-xs px-2 py-1 rounded bg-muted text-muted-foreground whitespace-nowrap max-w-32 truncate" title={getTestName(currentQuestion.test_id)}>
+                    {getTestName(currentQuestion.test_id)}
+                  </span>
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <HTMLRenderer html={currentQuestion.question} />
@@ -395,6 +513,29 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
                   <Lightbulb className="w-4 h-4" />
                   <span>Solution</span>
                 </button>
+              )}
+              {mounted && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSaveQuestion}
+                    disabled={savingQuestion}
+                    className={`p-2 rounded-lg transition-colors ${
+                      savedQuestionIds.has(currentQuestion.id)
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-muted text-foreground hover:bg-muted/80'
+                    }`}
+                    title="Save question to Firebase"
+                  >
+                    <BookOpen className="w-5 h-5" fill={savedQuestionIds.has(currentQuestion.id) ? 'currentColor' : 'none'} />
+                  </button>
+                  <button
+                    onClick={handleShareQuestion}
+                    className="p-2 rounded-lg bg-muted text-foreground hover:bg-muted/80 transition-colors"
+                    title="Share question"
+                  >
+                    <Share2 className="w-5 h-5" />
+                  </button>
+                </div>
               )}
             </div>
           </div>

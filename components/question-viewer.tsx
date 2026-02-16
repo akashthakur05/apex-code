@@ -11,7 +11,7 @@ import { getSectionName } from '@/lib/mock-data'
 import { useState, useEffect } from 'react'
 import * as htmlToImage from "html-to-image"
 import { isBookmarked, addBookmark, removeBookmark, markTestComplete, unmarkTestComplete, isTestComplete as checkTestComplete } from '@/lib/bookmark-storage'
-import { saveQuestion, isSavedQuestion } from '@/lib/firebase-saved-questions'
+import { saveQuestion, isSavedQuestion, isSavedQuestionInCache, addToSavedQuestionsCache, removeFromSavedQuestionsCache } from '@/lib/firebase-saved-questions'
 import { useToast } from '@/components/ui/use-toast'
 // import { addBookmark, removeBookmark, isBookmarked, markTestComplete, unmarkTestComplete, isTestComplete as checkTestComplete } from '@/lib/bookmark-storage'
 import { useExamKeyboard } from "@/hooks/useExamKeyboard"
@@ -79,14 +79,21 @@ export default function QuestionViewer({ test, coaching, preloadedQuestions }: P
   }, [coaching.id, test.id])
 
   useEffect(() => {
-    // Load saved questions from Firebase on mount
+    // Load saved questions from cache or Firebase on mount
     const loadSavedQuestions = async () => {
       try {
         const saved = new Set<string>()
         for (const q of preloadedQuestions || []) {
-          const isSaved = await isSavedQuestion(q.id, coaching.id)
-          if (isSaved) {
+          // Try cache first for performance
+          const inCache = isSavedQuestionInCache(q.id, coaching.id)
+          if (inCache) {
             saved.add(q.id)
+          } else {
+            // Fall back to Firebase if not in cache
+            const isSaved = await isSavedQuestion(q.id, coaching.id)
+            if (isSaved) {
+              saved.add(q.id)
+            }
           }
         }
         setSavedQuestionIds(saved)
@@ -477,19 +484,41 @@ ${pageUrl}
       const isSaved = savedQuestionIds.has(currentQuestion.id)
 
       if (isSaved) {
-        // Would need to remove from Firebase - for now we'll just toggle the UI
+        // Remove from Firebase and cache
         setSavedQuestionIds(prev => {
           const newSet = new Set(prev)
           newSet.delete(currentQuestion.id)
           return newSet
         })
+        removeFromSavedQuestionsCache(currentQuestion.id, coaching.id)
         toast({
           title: 'Removed',
           description: 'Question removed from saved',
         })
       } else {
+        // Save to Firebase
         await saveQuestion(currentQuestion, coaching.id, test.id)
         setSavedQuestionIds(prev => new Set(prev).add(currentQuestion.id))
+        
+        // Add to cache
+        addToSavedQuestionsCache({
+          id: currentQuestion.id,
+          userId: '',
+          questionId: currentQuestion.id,
+          coachingId: coaching.id,
+          testId: test.id,
+          question: currentQuestion.question,
+          option_1: currentQuestion.option_1,
+          option_2: currentQuestion.option_2,
+          option_3: currentQuestion.option_3,
+          option_4: currentQuestion.option_4,
+          answer: currentQuestion.answer,
+          section_id: currentQuestion.section_id,
+          positive_marks: currentQuestion.positive_marks,
+          negative_marks: currentQuestion.negative_marks,
+          savedAt: { toMillis: () => Date.now() } as any,
+        })
+        
         toast({
           title: 'Success',
           description: 'Question saved successfully',
@@ -691,9 +720,9 @@ ${pageUrl}
               {/* Question Text */}
               <div className="mb-8">
                 <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm">
-                    {currentIndex + 1}
-                  </div>
+              <div className="flex-shrink-0 min-w-8 min-h-8 px-2 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm">
+                {currentQuestion.questionNumber || currentIndex + 1}
+              </div>
                   <div className="flex-1 min-w-0">
                     <HTMLRenderer html={currentQuestion.question} />
                   </div>
