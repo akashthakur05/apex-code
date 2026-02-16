@@ -12,6 +12,10 @@ import {
   Timestamp,
 } from 'firebase/firestore'
 
+// In-memory cache for saved questions
+let savedQuestionsCache: SavedQuestion[] | null = null
+let cacheInitialized = false
+
 export interface SavedQuestion {
   id: string
   userId: string
@@ -120,6 +124,11 @@ export async function removeSavedQuestion(docId: string): Promise<void> {
 
 export async function isSavedQuestion(questionId: string, coachingId: string): Promise<boolean> {
   try {
+    // Check cache first
+    if (cacheInitialized && savedQuestionsCache !== null) {
+      return savedQuestionsCache.some(sq => sq.questionId === questionId && sq.coachingId === coachingId)
+    }
+
     const auth = await getFirebaseAuth()
     const db = await getFirebaseDb()
 
@@ -141,4 +150,58 @@ export async function isSavedQuestion(questionId: string, coachingId: string): P
     console.error('Error checking saved question:', error)
     return false
   }
+}
+
+// Cache management functions
+export async function initializeSavedQuestionsCache(): Promise<void> {
+  try {
+    if (cacheInitialized) return
+
+    const saved = await getSavedQuestions()
+    savedQuestionsCache = saved
+    cacheInitialized = true
+    console.log('[v0] Initialized saved questions cache with', saved.length, 'questions')
+  } catch (error) {
+    console.error('Error initializing cache:', error)
+    cacheInitialized = true
+    savedQuestionsCache = []
+  }
+}
+
+export function getSavedQuestionsFromCache(coachingId?: string): SavedQuestion[] {
+  if (!cacheInitialized || savedQuestionsCache === null) {
+    return []
+  }
+
+  if (coachingId) {
+    return savedQuestionsCache.filter(sq => sq.coachingId === coachingId)
+  }
+
+  return savedQuestionsCache
+}
+
+export function addToSavedQuestionsCache(question: SavedQuestion): void {
+  if (savedQuestionsCache === null) {
+    savedQuestionsCache = []
+  }
+
+  // Check if already exists
+  const exists = savedQuestionsCache.some(sq => sq.questionId === question.questionId && sq.coachingId === question.coachingId)
+  if (!exists) {
+    savedQuestionsCache.unshift(question)
+  }
+}
+
+export function removeFromSavedQuestionsCache(questionId: string, coachingId: string): void {
+  if (savedQuestionsCache === null) return
+
+  savedQuestionsCache = savedQuestionsCache.filter(sq => !(sq.questionId === questionId && sq.coachingId === coachingId))
+}
+
+export function isSavedQuestionInCache(questionId: string, coachingId: string): boolean {
+  if (!cacheInitialized || savedQuestionsCache === null) {
+    return false
+  }
+
+  return savedQuestionsCache.some(sq => sq.questionId === questionId && sq.coachingId === coachingId)
 }

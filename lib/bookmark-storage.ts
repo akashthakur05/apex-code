@@ -109,6 +109,67 @@ export function isTestComplete(coachingId: string, testId: string): boolean {
   return getCompletedTests().includes(`${coachingId}-${testId}`)
 }
 
+// Last viewed question tracking
+const LAST_VIEWED_QUESTION_KEY = 'last_viewed_questions'
+
+export interface LastViewedQuestion {
+  coachingId: string
+  sectionId: string
+  questionIndex: number
+  timestamp: number
+}
+
+export function getLastViewedQuestions(): LastViewedQuestion[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const stored = localStorage.getItem(LAST_VIEWED_QUESTION_KEY)
+    return stored ? JSON.parse(stored) : []
+  } catch {
+    return []
+  }
+}
+
+export function saveLastViewedQuestion(coachingId: string, sectionId: string, questionIndex: number): void {
+  if (typeof window === 'undefined') return
+  try {
+    const allViewed = getLastViewedQuestions()
+    const key = `${coachingId}-${sectionId}`
+    
+    // Remove existing entry for this section
+    const filtered = allViewed.filter(item => `${item.coachingId}-${item.sectionId}` !== key)
+    
+    // Add new entry with current timestamp
+    filtered.push({
+      coachingId,
+      sectionId,
+      questionIndex,
+      timestamp: Date.now(),
+    })
+    
+    localStorage.setItem(LAST_VIEWED_QUESTION_KEY, JSON.stringify(filtered))
+  } catch (e) {
+    console.error('Error saving last viewed question:', e)
+  }
+}
+
+export function getLastViewedQuestion(coachingId: string, sectionId: string): number | null {
+  const allViewed = getLastViewedQuestions()
+  const entry = allViewed.find(item => item.coachingId === coachingId && item.sectionId === sectionId)
+  return entry ? entry.questionIndex : null
+}
+
+export function clearLastViewedQuestion(coachingId: string, sectionId: string): void {
+  if (typeof window === 'undefined') return
+  try {
+    const allViewed = getLastViewedQuestions()
+    const key = `${coachingId}-${sectionId}`
+    const filtered = allViewed.filter(item => `${item.coachingId}-${item.sectionId}` !== key)
+    localStorage.setItem(LAST_VIEWED_QUESTION_KEY, JSON.stringify(filtered))
+  } catch (e) {
+    console.error('Error clearing last viewed question:', e)
+  }
+}
+
 // Section completion tracking
 const SECTION_COMPLETION_KEY = 'section_completion'
 
