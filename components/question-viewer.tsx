@@ -534,8 +534,8 @@ ${pageUrl}
           option_4: currentQuestion.option_4,
           answer: currentQuestion.answer,
           section_id: currentQuestion.section_id,
-          positive_marks: currentQuestion.positive_marks,
-          negative_marks: currentQuestion.negative_marks,
+          positive_marks: +currentQuestion.positive_marks,
+          negative_marks: +currentQuestion.negative_marks,
           savedAt: { toMillis: () => Date.now() } as any,
         })
         
