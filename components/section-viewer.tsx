@@ -15,6 +15,7 @@ import * as htmlToImage from "html-to-image"
 import { saveLastViewedQuestion, getLastViewedQuestion } from '@/lib/bookmark-storage'
 import { saveQuestion, isSavedQuestion, addToSavedQuestionsCache, removeFromSavedQuestionsCache } from '@/lib/firebase-saved-questions'
 import { useToast } from '@/hooks/use-toast'
+import PrintableQuestion from './PrintableQuestion'
 
 interface Props {
   coachingId: string
@@ -74,6 +75,9 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
   const { toast } = useToast()
   const wrongQuestionRef = useRef<HTMLDivElement>(null)
   const questionContentRef = useRef<HTMLDivElement>(null)
+  // const captureRef = useRef<HTMLDivElement>(null)
+const printableRef = useRef<HTMLDivElement>(null)
+
   const [currentIndex, setCurrentIndex] = useState(0)
   const [selectedOption, setSelectedOption] = useState<number | null>(null)
   const [showSolution, setShowSolution] = useState(false)
@@ -155,25 +159,44 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
     setSelectedOption(null)
   }
 
-  const downloadWrongQuestion = async () => {
-    if (!questionContentRef.current) return
+  // const downloadWrongQuestion = async () => {
+  //   if (!questionContentRef.current) return
 
-    try {
-      const dataUrl = await htmlToImage.toPng(questionContentRef.current, { 
-        quality: 1,
-        pixelRatio: 2,
-        backgroundColor: '#ffffff'
-      })
+  //   try {
+  //     const dataUrl = await htmlToImage.toPng(questionContentRef.current, { 
+  //       quality: 1,
+  //       pixelRatio: 2,
+  //       backgroundColor: '#ffffff'
+  //     })
       
-      const link = document.createElement('a')
-      link.href = dataUrl
-      link.download = `Q${currentIndex + 1}-Wrong-Answer.png`
-      link.click()
-    } catch (error) {
-      console.error('Error downloading question:', error)
-      alert('Failed to download question image')
-    }
+  //     const link = document.createElement('a')
+  //     link.href = dataUrl
+  //     link.download = `Q${currentIndex + 1}-Wrong-Answer.png`
+  //     link.click()
+  //   } catch (error) {
+  //     console.error('Error downloading question:', error)
+  //     alert('Failed to download question image')
+  //   }
+  // }
+
+
+  const downloadWrongQuestion = async () => {
+  if (!printableRef.current) return
+
+  try {
+    const dataUrl = await htmlToImage.toPng(printableRef.current, {
+      pixelRatio: 2,
+      backgroundColor: '#ffffff',
+    })
+
+    const link = document.createElement('a')
+    link.href = dataUrl
+    link.download = `Q${currentIndex + 1}-Review.png`
+    link.click()
+  } catch (error) {
+    console.error('Error generating printable image:', error)
   }
+}
 
   const handleSaveQuestion = async () => {
     if (!currentQuestion) {
@@ -680,6 +703,23 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
           onClose={() => setShowSolution(false)}
         />
       )}
+      <div
+  style={{
+    position: 'absolute',
+    left: '-9999px',
+    top: 0,
+  }}
+>
+  {currentQuestion && (
+    <div ref={printableRef}>
+      <PrintableQuestion
+        question={currentQuestion}
+        questionNumber={currentIndex + 1}
+        testName={getTestName(currentQuestion.test_id)}
+      />
+    </div>
+  )}
+</div>
     </main>
   )
 }
