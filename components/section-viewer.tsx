@@ -157,22 +157,29 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
   }
 
   const downloadWrongQuestion = async () => {
-    if (!downloadableCardRef.current) return
+    if (!downloadableCardRef.current) {
+      console.log('[v0] downloadableCardRef is not set')
+      return
+    }
 
     try {
+      console.log('[v0] Download card ref content:', downloadableCardRef.current.innerHTML.substring(0, 200))
       const dataUrl = await htmlToImage.toPng(downloadableCardRef.current, { 
         quality: 1,
         pixelRatio: 2,
-        backgroundColor: '#ffffff'
+        backgroundColor: '#ffffff',
+        cacheBust: true,
+        ignoreCache: true
       })
       
+      console.log('[v0] Image generated, size:', dataUrl.length)
       const link = document.createElement('a')
       link.href = dataUrl
       link.download = `Q${currentIndex + 1}-Wrong-Answer.png`
       link.click()
     } catch (error) {
-      console.error('Error downloading question:', error)
-      alert('Failed to download question image')
+      console.error('[v0] Error downloading question:', error)
+      alert('Failed to download question image: ' + error.message)
     }
   }
 
@@ -684,66 +691,51 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
       </div>
 
       {/* HIDDEN DOWNLOADABLE CARD */}
-      <div
-        ref={downloadableCardRef}
-        style={{ 
-          position: 'absolute',
-          left: '-9999px',
-          top: '-9999px',
-          width: '900px',
-          height: 'auto'
-        }}
-        className="bg-white p-12 font-sans"
-      >
-        {currentQuestion && (
-          <div style={{ fontSize: '16px', lineHeight: '1.6', color: '#000' }}>
-            {/* Header */}
-            <div style={{ borderBottom: '2px solid #e5e7eb', paddingBottom: '24px', marginBottom: '32px' }}>
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '16px' }}>
-                <div style={{ 
-                  width: '40px', 
-                  height: '40px', 
-                  borderRadius: '50%', 
-                  backgroundColor: '#2563eb', 
-                  color: 'white',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 'bold',
-                  fontSize: '18px'
-                }}>
-                  {currentIndex + 1}
-                </div>
-                {currentQuestion.test_id && (
-                  <span style={{ 
-                    fontSize: '14px', 
-                    padding: '6px 12px',
-                    borderRadius: '9999px',
-                    backgroundColor: '#e5e7eb',
-                    color: '#374151',
-                    fontWeight: '500'
-                  }}>
-                    {getTestName(currentQuestion.test_id)}
-                  </span>
-                )}
-              </div>
-              <div style={{ fontSize: '14px', color: '#4b5563' }}>
-                Marks: <span style={{ fontWeight: 'bold' }}>+{currentQuestion.positive_marks}</span> / <span style={{ fontWeight: 'bold', color: '#dc2626' }}>-{currentQuestion.negative_marks}</span>
-              </div>
+      {currentQuestion && mounted && (
+        <div
+          ref={downloadableCardRef}
+          style={{ 
+            position: 'fixed',
+            left: '-10000px',
+            top: '0',
+            width: '900px',
+            height: 'auto',
+            backgroundColor: '#fff',
+            padding: '40px',
+            fontFamily: 'Arial, sans-serif',
+            fontSize: '16px',
+            lineHeight: '1.5',
+            color: '#000'
+          }}
+        >
+          {/* Header */}
+          <div style={{ marginBottom: '30px', borderBottom: '2px solid #ddd', paddingBottom: '20px' }}>
+            <div style={{ marginBottom: '10px' }}>
+              <strong>Q{currentIndex + 1}</strong>
+              {currentQuestion.test_id && (
+                <span style={{ marginLeft: '15px', fontSize: '12px', color: '#666' }}>
+                  ({getTestName(currentQuestion.test_id)})
+                </span>
+              )}
             </div>
-
-            {/* Question */}
-            <div style={{ marginBottom: '32px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>Question</h3>
-              <div style={{ fontSize: '16px', color: '#1f2937', lineHeight: '1.7' }}>
-                {currentQuestion.question && currentQuestion.question.replace(/<[^>]*>/g, '')}
-              </div>
+            <div style={{ fontSize: '12px', color: '#666' }}>
+              Marks: +{currentQuestion.positive_marks} / -{currentQuestion.negative_marks}
             </div>
+          </div>
 
-            {/* Options */}
-            <div style={{ marginBottom: '32px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', marginBottom: '12px' }}>Options</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {/* Question */}
+          <div style={{ marginBottom: '25px' }}>
+            <div style={{ fontWeight: 'bold', marginBottom: '10px', fontSize: '14px' }}>Question:</div>
+            <div style={{ fontSize: '15px', lineHeight: '1.6' }}>
+              {currentQuestion.question ? currentQuestion.question.replace(/<[^>]*>/g, '') : 'N/A'}
+            </div>
+          </div>
+
+          {/* Options */}
+          <div style={{ marginBottom: '25px' }}>
+            <div style={{ fontWeight: 'bold', marginBottom: '10px', fontSize: '14px' }}>Options:</div>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <tbody>
                 {[
                   { num: '1', label: 'A', option: currentQuestion.option_1 },
                   { num: '2', label: 'B', option: currentQuestion.option_2 },
@@ -752,63 +744,41 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
                 ].map((opt) => {
                   const isCorrect = String(currentQuestion.answer) === opt.num
                   return (
-                    <div
-                      key={opt.label}
-                      style={{
-                        padding: '12px',
-                        borderRadius: '8px',
-                        border: '2px solid ' + (isCorrect ? '#22c55e' : '#d1d5db'),
-                        backgroundColor: isCorrect ? '#f0fdf4' : '#f9fafb',
-                        display: 'flex',
-                        gap: '12px',
-                        alignItems: 'flex-start'
-                      }}
-                    >
-                      <div style={{
-                        width: '32px',
-                        height: '32px',
-                        borderRadius: '50%',
-                        backgroundColor: '#d1d5db',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontWeight: 'bold',
-                        fontSize: '14px',
-                        flexShrink: 0
-                      }}>
-                        {opt.label}
-                      </div>
-                      <div style={{ fontSize: '14px', color: '#1f2937', flex: 1 }}>
-                        {opt.option && opt.option.replace(/<[^>]*>/g, '')}
-                      </div>
+                    <tr key={opt.label} style={{ 
+                      borderBottom: '1px solid #ddd',
+                      backgroundColor: isCorrect ? '#f0fff4' : '#fff'
+                    }}>
+                      <td style={{ padding: '8px', width: '30px', fontWeight: 'bold' }}>{opt.label}</td>
+                      <td style={{ padding: '8px' }}>
+                        {opt.option ? opt.option.replace(/<[^>]*>/g, '') : 'N/A'}
+                      </td>
                       {isCorrect && (
-                        <div style={{ color: '#22c55e', fontWeight: 'bold', fontSize: '18px', marginLeft: 'auto' }}>✓</div>
+                        <td style={{ padding: '8px', textAlign: 'right', color: '#22c55e', fontWeight: 'bold' }}>✓ Correct</td>
                       )}
-                    </div>
+                    </tr>
                   )
                 })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Explanation */}
+          {currentQuestion.solution_text && (
+            <div>
+              <div style={{ fontWeight: 'bold', marginBottom: '10px', fontSize: '14px' }}>Explanation:</div>
+              <div style={{ 
+                fontSize: '14px', 
+                lineHeight: '1.6',
+                backgroundColor: '#f5f5f5',
+                padding: '12px',
+                borderRadius: '4px'
+              }}>
+                {currentQuestion.solution_text.replace(/<[^>]*>/g, '')}
               </div>
             </div>
-
-            {/* Explanation */}
-            {currentQuestion.solution_text && (
-              <div style={{ borderTop: '2px solid #e5e7eb', paddingTop: '24px' }}>
-                <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', marginBottom: '12px' }}>Explanation</h3>
-                <div style={{ 
-                  fontSize: '14px', 
-                  color: '#1f2937', 
-                  lineHeight: '1.6',
-                  backgroundColor: '#eff6ff',
-                  padding: '16px',
-                  borderRadius: '8px'
-                }}>
-                  {currentQuestion.solution_text && currentQuestion.solution_text.replace(/<[^>]*>/g, '')}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {/* SOLUTION MODAL */}
       {mounted && (
