@@ -191,7 +191,7 @@ const printableRef = useRef<HTMLDivElement>(null)
 
     const link = document.createElement('a')
     link.href = dataUrl
-    link.download = `Q${currentIndex + 1}-Review.png`
+      link.download = `Q${currentIndex + 1}-${coaching?.id || 'Unknown'}-${crypto.randomUUID().split('-')[0].substring(0, 4)}-${coaching?.folder_name}.png`
     link.click()
   } catch (error) {
     console.error('Error generating printable image:', error)
