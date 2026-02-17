@@ -15,6 +15,7 @@ import * as htmlToImage from "html-to-image"
 import { saveLastViewedQuestion, getLastViewedQuestion } from '@/lib/bookmark-storage'
 import { saveQuestion, isSavedQuestion, addToSavedQuestionsCache, removeFromSavedQuestionsCache } from '@/lib/firebase-saved-questions'
 import { useToast } from '@/hooks/use-toast'
+import PrintableQuestion from './PrintableQuestion'
 
 interface Props {
   coachingId: string
@@ -73,6 +74,10 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
   const router = useRouter()
   const { toast } = useToast()
   const wrongQuestionRef = useRef<HTMLDivElement>(null)
+  const questionContentRef = useRef<HTMLDivElement>(null)
+  // const captureRef = useRef<HTMLDivElement>(null)
+const printableRef = useRef<HTMLDivElement>(null)
+
   const [currentIndex, setCurrentIndex] = useState(0)
   const [selectedOption, setSelectedOption] = useState<number | null>(null)
   const [showSolution, setShowSolution] = useState(false)
@@ -154,24 +159,44 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
     setSelectedOption(null)
   }
 
+  // const downloadWrongQuestion = async () => {
+  //   if (!questionContentRef.current) return
+
+  //   try {
+  //     const dataUrl = await htmlToImage.toPng(questionContentRef.current, { 
+  //       quality: 1,
+  //       pixelRatio: 2,
+  //       backgroundColor: '#ffffff'
+  //     })
+      
+  //     const link = document.createElement('a')
+  //     link.href = dataUrl
+  //     link.download = `Q${currentIndex + 1}-Wrong-Answer.png`
+  //     link.click()
+  //   } catch (error) {
+  //     console.error('Error downloading question:', error)
+  //     alert('Failed to download question image')
+  //   }
+  // }
+
+
   const downloadWrongQuestion = async () => {
-    if (!wrongQuestionRef.current) return
+  if (!printableRef.current) return
 
-    try {
-      const dataUrl = await htmlToImage.toPng(wrongQuestionRef.current, {
-        quality: 1,
-        pixelRatio: 2
-      })
+  try {
+    const dataUrl = await htmlToImage.toPng(printableRef.current, {
+      pixelRatio: 2,
+      backgroundColor: '#ffffff',
+    })
 
-      const link = document.createElement('a')
-      link.href = dataUrl
-      link.download = `Q${currentIndex + 1}-Wrong-Answer.png`
-      link.click()
-    } catch (error) {
-      console.error('Error downloading question:', error)
-      alert('Failed to download question image')
-    }
+    const link = document.createElement('a')
+    link.href = dataUrl
+    link.download = `Q${currentIndex + 1}-Review.png`
+    link.click()
+  } catch (error) {
+    console.error('Error generating printable image:', error)
   }
+}
 
   const handleSaveQuestion = async () => {
     if (!currentQuestion) {
@@ -235,9 +260,9 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
 
   const handleShareQuestion = async () => {
     try {
-      const questionText = `Q${currentIndex + 1}: ${currentQuestion.question}`
+      const questionText = `Q${currentIndex + 1}: Check this question`
       const shareUrl = window.location.href
-
+      
       if (navigator.share) {
         await navigator.share({
           title: 'Question',
@@ -246,12 +271,13 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
         })
       } else {
         // Fallback: download as image
-        if (wrongQuestionRef.current) {
-          const dataUrl = await htmlToImage.toPng(wrongQuestionRef.current, {
+        if (questionContentRef.current) {
+          const dataUrl = await htmlToImage.toPng(questionContentRef.current, { 
             quality: 1,
-            pixelRatio: 2
+            pixelRatio: 2,
+            backgroundColor: '#ffffff'
           })
-
+          
           const link = document.createElement('a')
           link.href = dataUrl
           link.download = `Q${currentIndex + 1}-Question.png`
@@ -528,66 +554,71 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
             </div>
           ) : (
             <>
-              {/* QUESTION HEADER WITH SOLUTION BUTTON */}
-              <div className="mb-8 flex flex-col md:flex-row gap-4 items-start justify-between">
-                <div className="flex gap-4 flex-1 w-full">
-                  <div className="flex flex-col gap-2">
-                    <div className="min-w-8 min-h-8 px-2 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold flex-shrink-0">
-                      {currentIndex + 1}
-                    </div>
-                    {currentQuestion && currentQuestion.test_id && (
-                      <span className="text-xs px-2 py-1 rounded bg-muted text-muted-foreground whitespace-nowrap max-w-32 truncate" title={getTestName(currentQuestion.test_id)}>
-                        {getTestName(currentQuestion.test_id)}
-                      </span>
-                    )}
+              <div ref={questionContentRef}>
+                {/* QUESTION HEADER */}
+                <div className="mb-6 flex gap-2 items-start flex-wrap">
+                  {/* Question Number Badge */}
+                  <div className="min-w-7 min-h-7 md:min-w-8 md:min-h-8 px-1.5 md:px-2 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm md:text-base flex-shrink-0">
+                    {currentIndex + 1}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <HTMLRenderer html={currentQuestion.question} />
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-2 flex-shrink-0 w-full md:w-auto">
-                  {mounted && selectedOption !== null && selectedOption !== Number(currentQuestion.answer) && (
-                    <button
-                      onClick={downloadWrongQuestion}
-                      className="flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg bg-orange-50 dark:bg-orange-950 text-orange-600 dark:text-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900 transition whitespace-nowrap text-sm md:text-base"
-                      title="Download this question with correct answer"
-                    >
-                      <Download className="w-4 h-4" />
-                      <span>Download</span>
-                    </button>
-                  )}
-                  {mounted && currentQuestion.solution_text && (
-                    <button
-                      onClick={() => setShowSolution(true)}
-                      className="flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition whitespace-nowrap text-sm md:text-base"
-                    >
-                      <Lightbulb className="w-4 h-4" />
-                      <span>Solution</span>
-                    </button>
-                  )}
-                  {mounted && currentQuestion && (
-                    <div className="flex gap-2">
-                      <button
-                        onClick={handleSaveQuestion}
-                        disabled={savingQuestion}
-                        className={`p-2 rounded-lg transition-colors ${savedQuestionIds.has(currentQuestion.id)
-                            ? 'bg-blue-500 text-white'
-                            : 'bg-muted text-foreground hover:bg-muted/80'
-                          }`}
-                        title="Save question to Firebase"
-                      >
-                        <BookOpen className="w-5 h-5" fill={savedQuestionIds.has(currentQuestion.id) ? 'currentColor' : 'none'} />
-                      </button>
-                      <button
-                        onClick={handleShareQuestion}
-                        className="p-2 rounded-lg bg-muted text-foreground hover:bg-muted/80 transition-colors"
-                        title="Share question"
-                      >
-                        <Share2 className="w-5 h-5" />
-                      </button>
-                    </div>
+                  
+                  {/* Test ID Badge - Compact on Mobile */}
+                  {currentQuestion && currentQuestion.test_id && (
+                    <span className="text-xs px-2 py-1 rounded bg-muted text-muted-foreground whitespace-nowrap max-w-28 sm:max-w-32 truncate flex-shrink-0" title={getTestName(currentQuestion.test_id)}>
+                      {getTestName(currentQuestion.test_id)}
+                    </span>
                   )}
                 </div>
+                
+                {/* Question Text */}
+                <div className="mb-8">
+                  <HTMLRenderer html={currentQuestion.question} />
+                </div>
+              </div>
+
+              {/* ACTION BUTTONS */}
+              <div className="flex flex-wrap gap-2 mb-6">
+                {mounted && selectedOption !== null && selectedOption !== Number(currentQuestion.answer) && (
+                  <button
+                    onClick={downloadWrongQuestion}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-50 dark:bg-orange-950 text-orange-600 dark:text-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900 transition whitespace-nowrap text-sm"
+                    title="Download this question with correct answer"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span className="hidden sm:inline">Download</span>
+                  </button>
+                )}
+                {mounted && currentQuestion.solution_text && (
+                  <button
+                    onClick={() => setShowSolution(true)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition whitespace-nowrap text-sm"
+                  >
+                    <Lightbulb className="w-4 h-4" />
+                    <span className="hidden sm:inline">Solution</span>
+                  </button>
+                )}
+                {mounted && currentQuestion && (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleSaveQuestion}
+                      disabled={savingQuestion}
+                      className={`p-2 rounded-lg transition-colors ${savedQuestionIds.has(currentQuestion.id)
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-muted text-foreground hover:bg-muted/80'
+                        }`}
+                      title="Save question"
+                    >
+                      <BookOpen className="w-5 h-5" fill={savedQuestionIds.has(currentQuestion.id) ? 'currentColor' : 'none'} />
+                    </button>
+                    <button
+                      onClick={handleShareQuestion}
+                      className="p-2 rounded-lg bg-muted text-foreground hover:bg-muted/80 transition-colors"
+                      title="Share question"
+                    >
+                      <Share2 className="w-5 h-5" />
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* OPTIONS */}
@@ -672,6 +703,23 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
           onClose={() => setShowSolution(false)}
         />
       )}
+      <div
+  style={{
+    position: 'absolute',
+    left: '-9999px',
+    top: 0,
+  }}
+>
+  {currentQuestion && (
+    <div ref={printableRef}>
+      <PrintableQuestion
+        question={currentQuestion}
+        questionNumber={currentIndex + 1}
+        testName={getTestName(currentQuestion.test_id)}
+      />
+    </div>
+  )}
+</div>
     </main>
   )
 }
