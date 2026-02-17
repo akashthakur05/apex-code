@@ -530,25 +530,23 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
           ) : (
             <>
               <div ref={questionContentRef}>
-                {/* QUESTION HEADER WITH SOLUTION BUTTON */}
-                <div className="mb-8 flex flex-col md:flex-row gap-4 items-start justify-between">
-                  <div className="flex gap-2 md:gap-4 flex-1 w-full">
-                    <div className="flex flex-col gap-1 flex-shrink-0">
-                      <div className="min-w-7 min-h-7 md:min-w-8 md:min-h-8 px-1.5 md:px-2 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm md:text-base">
-                        {currentIndex + 1}
-                      </div>
-                      {currentQuestion && currentQuestion.test_id && (
-                        <span className="hidden md:inline text-xs px-2 py-1 rounded bg-muted text-muted-foreground whitespace-nowrap max-w-32 truncate" title={getTestName(currentQuestion.test_id)}>
-                          {getTestName(currentQuestion.test_id)}
-                        </span>
-                      )}
+                {/* QUESTION HEADER */}
+                <div className="mb-8 flex flex-col md:flex-row gap-3 md:gap-4 items-start justify-between">
+                  <div className="flex flex-col sm:flex-row gap-1.5 sm:gap-2 flex-1 w-full">
+                    {/* Question Number Badge */}
+                    <div className="min-w-7 min-h-7 md:min-w-8 md:min-h-8 px-1.5 md:px-2 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm md:text-base flex-shrink-0">
+                      {currentIndex + 1}
                     </div>
+                    
+                    {/* Test ID Badge - Compact on Mobile */}
+                    {currentQuestion && currentQuestion.test_id && (
+                      <span className="text-xs px-2 py-1 rounded bg-muted text-muted-foreground whitespace-nowrap max-w-28 sm:max-w-32 truncate flex-shrink-0 self-center" title={getTestName(currentQuestion.test_id)}>
+                        {getTestName(currentQuestion.test_id)}
+                      </span>
+                    )}
+                    
+                    {/* Question Text */}
                     <div className="flex-1 min-w-0">
-                      {currentQuestion && currentQuestion.test_id && (
-                        <div className="md:hidden text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground whitespace-nowrap max-w-40 truncate mb-1" title={getTestName(currentQuestion.test_id)}>
-                          {getTestName(currentQuestion.test_id)}
-                        </div>
-                      )}
                       <HTMLRenderer html={currentQuestion.question} />
                     </div>
                   </div>
