@@ -74,7 +74,6 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
   const { toast } = useToast()
   const wrongQuestionRef = useRef<HTMLDivElement>(null)
   const questionContentRef = useRef<HTMLDivElement>(null)
-  const downloadableCardRef = useRef<HTMLDivElement>(null)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [selectedOption, setSelectedOption] = useState<number | null>(null)
   const [showSolution, setShowSolution] = useState(false)
@@ -157,29 +156,22 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
   }
 
   const downloadWrongQuestion = async () => {
-    if (!downloadableCardRef.current) {
-      console.log('[v0] downloadableCardRef is not set')
-      return
-    }
+    if (!questionContentRef.current) return
 
     try {
-      console.log('[v0] Download card ref content:', downloadableCardRef.current.innerHTML.substring(0, 200))
-      const dataUrl = await htmlToImage.toPng(downloadableCardRef.current, { 
+      const dataUrl = await htmlToImage.toPng(questionContentRef.current, { 
         quality: 1,
         pixelRatio: 2,
-        backgroundColor: '#ffffff',
-        cacheBust: true,
-        ignoreCache: true
+        backgroundColor: '#ffffff'
       })
       
-      console.log('[v0] Image generated, size:', dataUrl.length)
       const link = document.createElement('a')
       link.href = dataUrl
       link.download = `Q${currentIndex + 1}-Wrong-Answer.png`
       link.click()
     } catch (error) {
-      console.error('[v0] Error downloading question:', error)
-      alert('Failed to download question image: ' + error.message)
+      console.error('Error downloading question:', error)
+      alert('Failed to download question image')
     }
   }
 
@@ -249,16 +241,15 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
       const shareUrl = window.location.href
       
       if (navigator.share) {
-        // Try to use native share if available
         await navigator.share({
           title: 'Question',
           text: questionText,
           url: shareUrl,
         })
       } else {
-        // Fallback: download as image and show toast
-        if (downloadableCardRef.current) {
-          const dataUrl = await htmlToImage.toPng(downloadableCardRef.current, { 
+        // Fallback: download as image
+        if (questionContentRef.current) {
+          const dataUrl = await htmlToImage.toPng(questionContentRef.current, { 
             quality: 1,
             pixelRatio: 2,
             backgroundColor: '#ffffff'
@@ -268,19 +259,10 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
           link.href = dataUrl
           link.download = `Q${currentIndex + 1}-Question.png`
           link.click()
-          
-          toast({
-            title: 'Downloaded',
-            description: 'Question image downloaded successfully',
-          })
         }
       }
     } catch (error) {
       console.error('Error sharing question:', error)
-      toast({
-        title: 'Share',
-        description: 'Copied question link to clipboard',
-      })
     }
   }
 
@@ -689,96 +671,6 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
           </div>
         </div>
       </div>
-
-      {/* HIDDEN DOWNLOADABLE CARD */}
-      {currentQuestion && mounted && (
-        <div
-          ref={downloadableCardRef}
-          style={{ 
-            position: 'fixed',
-            left: '-10000px',
-            top: '0',
-            width: '900px',
-            height: 'auto',
-            backgroundColor: '#fff',
-            padding: '40px',
-            fontFamily: 'Arial, sans-serif',
-            fontSize: '16px',
-            lineHeight: '1.5',
-            color: '#000'
-          }}
-        >
-          {/* Header */}
-          <div style={{ marginBottom: '30px', borderBottom: '2px solid #ddd', paddingBottom: '20px' }}>
-            <div style={{ marginBottom: '10px' }}>
-              <strong>Q{currentIndex + 1}</strong>
-              {currentQuestion.test_id && (
-                <span style={{ marginLeft: '15px', fontSize: '12px', color: '#666' }}>
-                  ({getTestName(currentQuestion.test_id)})
-                </span>
-              )}
-            </div>
-            <div style={{ fontSize: '12px', color: '#666' }}>
-              Marks: +{currentQuestion.positive_marks} / -{currentQuestion.negative_marks}
-            </div>
-          </div>
-
-          {/* Question */}
-          <div style={{ marginBottom: '25px' }}>
-            <div style={{ fontWeight: 'bold', marginBottom: '10px', fontSize: '14px' }}>Question:</div>
-            <div style={{ fontSize: '15px', lineHeight: '1.6' }}>
-              {currentQuestion.question ? currentQuestion.question.replace(/<[^>]*>/g, '') : 'N/A'}
-            </div>
-          </div>
-
-          {/* Options */}
-          <div style={{ marginBottom: '25px' }}>
-            <div style={{ fontWeight: 'bold', marginBottom: '10px', fontSize: '14px' }}>Options:</div>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <tbody>
-                {[
-                  { num: '1', label: 'A', option: currentQuestion.option_1 },
-                  { num: '2', label: 'B', option: currentQuestion.option_2 },
-                  { num: '3', label: 'C', option: currentQuestion.option_3 },
-                  { num: '4', label: 'D', option: currentQuestion.option_4 },
-                ].map((opt) => {
-                  const isCorrect = String(currentQuestion.answer) === opt.num
-                  return (
-                    <tr key={opt.label} style={{ 
-                      borderBottom: '1px solid #ddd',
-                      backgroundColor: isCorrect ? '#f0fff4' : '#fff'
-                    }}>
-                      <td style={{ padding: '8px', width: '30px', fontWeight: 'bold' }}>{opt.label}</td>
-                      <td style={{ padding: '8px' }}>
-                        {opt.option ? opt.option.replace(/<[^>]*>/g, '') : 'N/A'}
-                      </td>
-                      {isCorrect && (
-                        <td style={{ padding: '8px', textAlign: 'right', color: '#22c55e', fontWeight: 'bold' }}>✓ Correct</td>
-                      )}
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Explanation */}
-          {currentQuestion.solution_text && (
-            <div>
-              <div style={{ fontWeight: 'bold', marginBottom: '10px', fontSize: '14px' }}>Explanation:</div>
-              <div style={{ 
-                fontSize: '14px', 
-                lineHeight: '1.6',
-                backgroundColor: '#f5f5f5',
-                padding: '12px',
-                borderRadius: '4px'
-              }}>
-                {currentQuestion.solution_text.replace(/<[^>]*>/g, '')}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* SOLUTION MODAL */}
       {mounted && (
