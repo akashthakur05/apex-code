@@ -531,34 +531,32 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
             <>
               <div ref={questionContentRef}>
                 {/* QUESTION HEADER */}
-                <div className="mb-8 flex flex-col md:flex-row gap-3 md:gap-4 items-start justify-between">
-                  <div className="flex flex-col sm:flex-row gap-1.5 sm:gap-2 flex-1 w-full">
-                    {/* Question Number Badge */}
-                    <div className="min-w-7 min-h-7 md:min-w-8 md:min-h-8 px-1.5 md:px-2 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm md:text-base flex-shrink-0">
-                      {currentIndex + 1}
-                    </div>
-                    
-                    {/* Test ID Badge - Compact on Mobile */}
-                    {currentQuestion && currentQuestion.test_id && (
-                      <span className="text-xs px-2 py-1 rounded bg-muted text-muted-foreground whitespace-nowrap max-w-28 sm:max-w-32 truncate flex-shrink-0 self-center" title={getTestName(currentQuestion.test_id)}>
-                        {getTestName(currentQuestion.test_id)}
-                      </span>
-                    )}
-                    
-                    {/* Question Text */}
-                    <div className="flex-1 min-w-0">
-                      <HTMLRenderer html={currentQuestion.question} />
-                    </div>
+                <div className="mb-6 flex gap-2 items-start flex-wrap">
+                  {/* Question Number Badge */}
+                  <div className="min-w-7 min-h-7 md:min-w-8 md:min-h-8 px-1.5 md:px-2 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm md:text-base flex-shrink-0">
+                    {currentIndex + 1}
                   </div>
+                  
+                  {/* Test ID Badge - Compact on Mobile */}
+                  {currentQuestion && currentQuestion.test_id && (
+                    <span className="text-xs px-2 py-1 rounded bg-muted text-muted-foreground whitespace-nowrap max-w-28 sm:max-w-32 truncate flex-shrink-0" title={getTestName(currentQuestion.test_id)}>
+                      {getTestName(currentQuestion.test_id)}
+                    </span>
+                  )}
+                </div>
+                
+                {/* Question Text */}
+                <div className="mb-8">
+                  <HTMLRenderer html={currentQuestion.question} />
                 </div>
               </div>
 
               {/* ACTION BUTTONS */}
-              <div className="flex flex-wrap gap-2 flex-shrink-0 w-full md:w-auto mb-6">
+              <div className="flex flex-wrap gap-2 mb-6">
                 {mounted && selectedOption !== null && selectedOption !== Number(currentQuestion.answer) && (
                   <button
                     onClick={downloadWrongQuestion}
-                    className="flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg bg-orange-50 dark:bg-orange-950 text-orange-600 dark:text-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900 transition whitespace-nowrap text-sm md:text-base"
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-50 dark:bg-orange-950 text-orange-600 dark:text-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900 transition whitespace-nowrap text-sm"
                     title="Download this question with correct answer"
                   >
                     <Download className="w-4 h-4" />
@@ -568,7 +566,7 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
                 {mounted && currentQuestion.solution_text && (
                   <button
                     onClick={() => setShowSolution(true)}
-                    className="flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition whitespace-nowrap text-sm md:text-base"
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition whitespace-nowrap text-sm"
                   >
                     <Lightbulb className="w-4 h-4" />
                     <span className="hidden sm:inline">Solution</span>
