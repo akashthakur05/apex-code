@@ -686,76 +686,123 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
       {/* HIDDEN DOWNLOADABLE CARD */}
       <div
         ref={downloadableCardRef}
-        style={{ display: 'none' }}
-        className="w-[800px] bg-white p-12"
+        style={{ 
+          position: 'absolute',
+          left: '-9999px',
+          top: '-9999px',
+          width: '900px',
+          height: 'auto'
+        }}
+        className="bg-white p-12 font-sans"
       >
         {currentQuestion && (
-          <div className="space-y-8">
+          <div style={{ fontSize: '16px', lineHeight: '1.6', color: '#000' }}>
             {/* Header */}
-            <div className="border-b pb-6">
-              <div className="flex gap-3 items-center mb-4">
-                <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-lg">
+            <div style={{ borderBottom: '2px solid #e5e7eb', paddingBottom: '24px', marginBottom: '32px' }}>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '16px' }}>
+                <div style={{ 
+                  width: '40px', 
+                  height: '40px', 
+                  borderRadius: '50%', 
+                  backgroundColor: '#2563eb', 
+                  color: 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 'bold',
+                  fontSize: '18px'
+                }}>
                   {currentIndex + 1}
                 </div>
                 {currentQuestion.test_id && (
-                  <span className="text-sm px-3 py-1 rounded-full bg-gray-200 text-gray-700 font-medium">
+                  <span style={{ 
+                    fontSize: '14px', 
+                    padding: '6px 12px',
+                    borderRadius: '9999px',
+                    backgroundColor: '#e5e7eb',
+                    color: '#374151',
+                    fontWeight: '500'
+                  }}>
                     {getTestName(currentQuestion.test_id)}
                   </span>
                 )}
               </div>
-              <div className="text-sm text-gray-600">
-                Marks: <span className="font-semibold">+{currentQuestion.positive_marks}</span> / <span className="font-semibold text-red-600">-{currentQuestion.negative_marks}</span>
+              <div style={{ fontSize: '14px', color: '#4b5563' }}>
+                Marks: <span style={{ fontWeight: 'bold' }}>+{currentQuestion.positive_marks}</span> / <span style={{ fontWeight: 'bold', color: '#dc2626' }}>-{currentQuestion.negative_marks}</span>
               </div>
             </div>
 
             {/* Question */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">Question</h3>
-              <div className="text-base text-gray-800 leading-relaxed">
-                <HTMLRenderer html={currentQuestion.question} />
+            <div style={{ marginBottom: '32px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>Question</h3>
+              <div style={{ fontSize: '16px', color: '#1f2937', lineHeight: '1.7' }}>
+                {currentQuestion.question && currentQuestion.question.replace(/<[^>]*>/g, '')}
               </div>
             </div>
 
             {/* Options */}
-            <div className="space-y-3">
-              <h3 className="text-lg font-semibold text-gray-900">Options</h3>
-              <div className="space-y-2">
+            <div style={{ marginBottom: '32px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', marginBottom: '12px' }}>Options</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {[
-                  { label: 'A', option: currentQuestion.option_1 },
-                  { label: 'B', option: currentQuestion.option_2 },
-                  { label: 'C', option: currentQuestion.option_3 },
-                  { label: 'D', option: currentQuestion.option_4 },
-                ].map((opt) => (
-                  <div
-                    key={opt.label}
-                    className={`p-3 rounded-lg border-2 ${
-                      String(currentQuestion.answer) === opt.label.charCodeAt(0) - 64
-                        ? 'border-green-500 bg-green-50'
-                        : 'border-gray-300 bg-gray-50'
-                    }`}
-                  >
-                    <div className="flex gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center font-bold text-sm flex-shrink-0">
+                  { num: '1', label: 'A', option: currentQuestion.option_1 },
+                  { num: '2', label: 'B', option: currentQuestion.option_2 },
+                  { num: '3', label: 'C', option: currentQuestion.option_3 },
+                  { num: '4', label: 'D', option: currentQuestion.option_4 },
+                ].map((opt) => {
+                  const isCorrect = String(currentQuestion.answer) === opt.num
+                  return (
+                    <div
+                      key={opt.label}
+                      style={{
+                        padding: '12px',
+                        borderRadius: '8px',
+                        border: '2px solid ' + (isCorrect ? '#22c55e' : '#d1d5db'),
+                        backgroundColor: isCorrect ? '#f0fdf4' : '#f9fafb',
+                        display: 'flex',
+                        gap: '12px',
+                        alignItems: 'flex-start'
+                      }}
+                    >
+                      <div style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        backgroundColor: '#d1d5db',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 'bold',
+                        fontSize: '14px',
+                        flexShrink: 0
+                      }}>
                         {opt.label}
                       </div>
-                      <div className="text-sm text-gray-800">
-                        <HTMLRenderer html={opt.option} />
+                      <div style={{ fontSize: '14px', color: '#1f2937', flex: 1 }}>
+                        {opt.option && opt.option.replace(/<[^>]*>/g, '')}
                       </div>
-                      {String(currentQuestion.answer) === opt.label.charCodeAt(0) - 64 && (
-                        <div className="ml-auto text-green-600 font-bold text-lg">✓</div>
+                      {isCorrect && (
+                        <div style={{ color: '#22c55e', fontWeight: 'bold', fontSize: '18px', marginLeft: 'auto' }}>✓</div>
                       )}
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
 
             {/* Explanation */}
             {currentQuestion.solution_text && (
-              <div className="space-y-3 border-t pt-6">
-                <h3 className="text-lg font-semibold text-gray-900">Explanation</h3>
-                <div className="text-sm text-gray-700 leading-relaxed bg-blue-50 p-4 rounded-lg">
-                  <HTMLRenderer html={currentQuestion.solution_text} />
+              <div style={{ borderTop: '2px solid #e5e7eb', paddingTop: '24px' }}>
+                <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', marginBottom: '12px' }}>Explanation</h3>
+                <div style={{ 
+                  fontSize: '14px', 
+                  color: '#1f2937', 
+                  lineHeight: '1.6',
+                  backgroundColor: '#eff6ff',
+                  padding: '16px',
+                  borderRadius: '8px'
+                }}>
+                  {currentQuestion.solution_text && currentQuestion.solution_text.replace(/<[^>]*>/g, '')}
                 </div>
               </div>
             )}
