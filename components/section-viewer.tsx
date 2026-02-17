@@ -74,6 +74,7 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
   const { toast } = useToast()
   const wrongQuestionRef = useRef<HTMLDivElement>(null)
   const questionContentRef = useRef<HTMLDivElement>(null)
+  const downloadableCardRef = useRef<HTMLDivElement>(null)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [selectedOption, setSelectedOption] = useState<number | null>(null)
   const [showSolution, setShowSolution] = useState(false)
@@ -156,12 +157,13 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
   }
 
   const downloadWrongQuestion = async () => {
-    if (!questionContentRef.current) return
+    if (!downloadableCardRef.current) return
 
     try {
-      const dataUrl = await htmlToImage.toPng(questionContentRef.current, { 
+      const dataUrl = await htmlToImage.toPng(downloadableCardRef.current, { 
         quality: 1,
-        pixelRatio: 2 
+        pixelRatio: 2,
+        backgroundColor: '#ffffff'
       })
       
       const link = document.createElement('a')
@@ -236,31 +238,42 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
 
   const handleShareQuestion = async () => {
     try {
-      const questionText = `Q${currentIndex + 1}: ${currentQuestion.question}`
+      const questionText = `Q${currentIndex + 1}: Check this question`
       const shareUrl = window.location.href
-
+      
       if (navigator.share) {
+        // Try to use native share if available
         await navigator.share({
           title: 'Question',
           text: questionText,
           url: shareUrl,
         })
       } else {
-        // Fallback: download as image
-        if (questionContentRef.current) {
-          const dataUrl = await htmlToImage.toPng(questionContentRef.current, { 
+        // Fallback: download as image and show toast
+        if (downloadableCardRef.current) {
+          const dataUrl = await htmlToImage.toPng(downloadableCardRef.current, { 
             quality: 1,
-            pixelRatio: 2 
+            pixelRatio: 2,
+            backgroundColor: '#ffffff'
           })
           
           const link = document.createElement('a')
           link.href = dataUrl
           link.download = `Q${currentIndex + 1}-Question.png`
           link.click()
+          
+          toast({
+            title: 'Downloaded',
+            description: 'Question image downloaded successfully',
+          })
         }
       }
     } catch (error) {
       console.error('Error sharing question:', error)
+      toast({
+        title: 'Share',
+        description: 'Copied question link to clipboard',
+      })
     }
   }
 
@@ -668,6 +681,86 @@ export default function SectionViewer({ coachingId, sectionId, questionlist }: P
             </button>
           </div>
         </div>
+      </div>
+
+      {/* HIDDEN DOWNLOADABLE CARD */}
+      <div
+        ref={downloadableCardRef}
+        style={{ display: 'none' }}
+        className="w-[800px] bg-white p-12"
+      >
+        {currentQuestion && (
+          <div className="space-y-8">
+            {/* Header */}
+            <div className="border-b pb-6">
+              <div className="flex gap-3 items-center mb-4">
+                <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-lg">
+                  {currentIndex + 1}
+                </div>
+                {currentQuestion.test_id && (
+                  <span className="text-sm px-3 py-1 rounded-full bg-gray-200 text-gray-700 font-medium">
+                    {getTestName(currentQuestion.test_id)}
+                  </span>
+                )}
+              </div>
+              <div className="text-sm text-gray-600">
+                Marks: <span className="font-semibold">+{currentQuestion.positive_marks}</span> / <span className="font-semibold text-red-600">-{currentQuestion.negative_marks}</span>
+              </div>
+            </div>
+
+            {/* Question */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Question</h3>
+              <div className="text-base text-gray-800 leading-relaxed">
+                <HTMLRenderer html={currentQuestion.question} />
+              </div>
+            </div>
+
+            {/* Options */}
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold text-gray-900">Options</h3>
+              <div className="space-y-2">
+                {[
+                  { label: 'A', option: currentQuestion.option_1 },
+                  { label: 'B', option: currentQuestion.option_2 },
+                  { label: 'C', option: currentQuestion.option_3 },
+                  { label: 'D', option: currentQuestion.option_4 },
+                ].map((opt) => (
+                  <div
+                    key={opt.label}
+                    className={`p-3 rounded-lg border-2 ${
+                      String(currentQuestion.answer) === opt.label.charCodeAt(0) - 64
+                        ? 'border-green-500 bg-green-50'
+                        : 'border-gray-300 bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex gap-3">
+                      <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center font-bold text-sm flex-shrink-0">
+                        {opt.label}
+                      </div>
+                      <div className="text-sm text-gray-800">
+                        <HTMLRenderer html={opt.option} />
+                      </div>
+                      {String(currentQuestion.answer) === opt.label.charCodeAt(0) - 64 && (
+                        <div className="ml-auto text-green-600 font-bold text-lg">✓</div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Explanation */}
+            {currentQuestion.solution_text && (
+              <div className="space-y-3 border-t pt-6">
+                <h3 className="text-lg font-semibold text-gray-900">Explanation</h3>
+                <div className="text-sm text-gray-700 leading-relaxed bg-blue-50 p-4 rounded-lg">
+                  <HTMLRenderer html={currentQuestion.solution_text} />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* SOLUTION MODAL */}
