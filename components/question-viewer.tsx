@@ -11,7 +11,7 @@ import { getSectionName } from '@/lib/mock-data'
 import { useState, useEffect, use } from 'react'
 import * as htmlToImage from "html-to-image"
 import { isBookmarked, addBookmark, removeBookmark, markTestComplete, unmarkTestComplete, isTestComplete as checkTestComplete } from '@/lib/bookmark-storage'
-import { saveQuestion, isSavedQuestion, isSavedQuestionInCache, addToSavedQuestionsCache,  removeFromSavedQuestionsCache } from '@/lib/firebase-saved-questions'
+import { saveQuestion, isSavedQuestion, isSavedQuestionInCache, addToSavedQuestionsCache, removeFromSavedQuestionsCache } from '@/lib/firebase-saved-questions'
 import { useToast } from '@/components/ui/use-toast'
 // import { addBookmark, removeBookmark, isBookmarked, markTestComplete, unmarkTestComplete, isTestComplete as checkTestComplete } from '@/lib/bookmark-storage'
 import { useExamKeyboard } from "@/hooks/useExamKeyboard"
@@ -66,7 +66,7 @@ export default function QuestionViewer({ test, coaching, preloadedQuestions }: P
   // Check if current question is bookmarked when navigating
   useEffect(() => {
     if (!currentQuestion) return
-    
+
     const isCurrentBookmarked = isBookmarked(currentQuestion.id, coaching.id)
     setBookmarkedQuestions(prev => {
       const newSet = new Set(prev)
@@ -86,10 +86,10 @@ export default function QuestionViewer({ test, coaching, preloadedQuestions }: P
   // Check if current question is saved when navigating
   useEffect(() => {
     let isMounted = true
-    
+
     const checkCurrentQuestionSaved = async () => {
       if (!currentQuestion) return
-      
+
       try {
         // Try cache first for performance
         const inCache = isSavedQuestionInCache(currentQuestion.id, coaching.id)
@@ -116,9 +116,9 @@ export default function QuestionViewer({ test, coaching, preloadedQuestions }: P
         console.error('Error checking saved question:', error)
       }
     }
-    
+
     checkCurrentQuestionSaved()
-    
+
     return () => {
       isMounted = false
     }
@@ -136,11 +136,11 @@ export default function QuestionViewer({ test, coaching, preloadedQuestions }: P
     }
   }
 
-const handlePrevQuestion = () => {
-  setCurrentIndex(prev => Math.max(prev - 1, 0))
-  setSelectedOption(null)
-  setShowSolution(false)
-}
+  const handlePrevQuestion = () => {
+    setCurrentIndex(prev => Math.max(prev - 1, 0))
+    setSelectedOption(null)
+    setShowSolution(false)
+  }
 
   const handleOptionClick = (optionNum: number) => {
     setSelectedOption(optionNum)
@@ -347,7 +347,13 @@ const handlePrevQuestion = () => {
   //     alert("Unable to generate share preview.")
   //   }
   // }
-
+  const getTestName = (testId: string) => {
+    if (!coaching || !coaching.tests) {
+      return testId
+    }
+    const test = coaching.tests.find((t: any) => String(t.id) === String(testId))
+    return test?.title || testId
+  }
 
   const handleShareImage = async () => {
     const element = document.getElementById("question-card")
@@ -519,7 +525,7 @@ ${pageUrl}
         // Save to Firebase
         await saveQuestion(currentQuestion, coaching.id, test.id)
         setSavedQuestionIds(prev => new Set(prev).add(currentQuestion.id))
-        
+
         // Add to cache
         addToSavedQuestionsCache({
           id: currentQuestion.id,
@@ -538,7 +544,7 @@ ${pageUrl}
           negative_marks: +currentQuestion.negative_marks,
           savedAt: { toMillis: () => Date.now() } as any,
         })
-        
+
         toast({
           title: 'Success',
           description: 'Question saved successfully',
@@ -738,11 +744,23 @@ ${pageUrl}
             {/* Question Card */}
             <Card id='question-card' className="p-6 md:p-8 mb-8">
               {/* Question Text */}
+                        <div className="mb-6 flex gap-2 items-start flex-wrap">
+                    {/* Question Number Badge */}
+                    <div className="min-w-7 min-h-7 md:min-w-8 md:min-h-8 px-1.5 md:px-2 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm md:text-base flex-shrink-0">
+                      {currentIndex + 1}
+                    </div>
+
+                    {/* Test ID Badge - Compact on Mobile */}
+                    {currentQuestion && currentQuestion.test_id && (
+                      <span className="text-xs px-2 py-1 rounded bg-muted text-muted-foreground whitespace-nowrap max-w-28 sm:max-w-32 truncate flex-shrink-0" title={getTestName(currentQuestion.test_id)}>
+                        {getTestName(currentQuestion.test_id)}
+                      </span>
+                    )}
+                  </div>
+
               <div className="mb-8">
                 <div className="flex gap-4">
-              <div className="flex-shrink-0 min-w-8 min-h-8 px-2 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm">
-                {currentIndex + 1}
-              </div>||
+        
                   <div className="flex-1 min-w-0">
                     <HTMLRenderer html={currentQuestion.question} />
                   </div>
