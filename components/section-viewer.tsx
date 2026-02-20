@@ -220,16 +220,25 @@ const printableRef = useRef<HTMLDivElement>(null)
           description: 'Question removed from saved',
         })
       } else {
-        // Save to Firebase
+        // Save to Firebase with metadata
+        const sectionName = sectionNameMap[sectionId] || `Section ${sectionId}`
+        const coaching = coachingData.find(c => c.id === coachingId)
+        const test = coaching?.tests.find((t: any) => String(t.id) === String(currentQuestion.test_id))
 
-        await saveQuestion(currentQuestion, coachingId, sectionId)
+        await saveQuestion(currentQuestion, coachingId, sectionId, {
+          instituteName: coaching?.name || coachingId,
+          subject: sectionName,
+          sectionName: sectionName,
+          testName: test?.title || 'Unknown Test',
+        })
+        
         setSavedQuestionIds(prev => new Set(prev).add(currentQuestion.id))
         addToSavedQuestionsCache({
           id: currentQuestion.id,
           userId: '',
           questionId: currentQuestion.id,
           coachingId: coachingId,
-          testId:       currentQuestion.test_id,
+          testId: currentQuestion.test_id,
           question: currentQuestion.question,
           option_1: currentQuestion.option_1,
           option_2: currentQuestion.option_2,
@@ -239,7 +248,12 @@ const printableRef = useRef<HTMLDivElement>(null)
           section_id: currentQuestion.section_id,
           positive_marks: +currentQuestion.positive_marks,
           negative_marks: +currentQuestion.negative_marks,
+          solution_text: currentQuestion.solution_text || '',
           savedAt: { toMillis: () => Date.now() } as any,
+          instituteName: coaching?.name || coachingId,
+          subject: sectionName,
+          sectionName: sectionName,
+          testName: test?.title || 'Unknown Test',
         })
         toast({
           title: 'Success',

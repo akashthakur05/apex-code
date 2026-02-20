@@ -106,3 +106,28 @@ export interface CoachingInstitute {
 export interface SectionMap {
   [key: string]: string
 }
+
+export interface SavedQuestion {
+  id: string
+  userId: string
+  questionId: string
+  coachingId: string
+  testId: string
+  question: string
+  option_1: string
+  option_2: string
+  option_3: string
+  option_4: string
+  answer: string
+  section_id: string
+  positive_marks: number
+  negative_marks: number
+  savedAt: any // Firebase Timestamp
+  // New fields - backward compatible with defaults
+  instituteName?: string
+  subject?: string
+  solution?: string
+  sectionName?: string
+  testName?: string
+  solution_text?: string
+}

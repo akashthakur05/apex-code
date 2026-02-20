@@ -32,11 +32,27 @@ export interface SavedQuestion {
   positive_marks: number
   negative_marks: number
   savedAt: Timestamp
+  instituteName?: string
+  subject?: string
+  solution?: string
+  sectionName?: string
+  testName?: string
+  solution_text?: string
 }
 
 const COLLECTION_NAME = 'saved_questions'
 
-export async function saveQuestion(question: any, coachingId: string, testId: string): Promise<void> {
+export async function saveQuestion(
+  question: any,
+  coachingId: string,
+  testId: string,
+  metadata?: {
+    instituteName?: string
+    subject?: string
+    sectionName?: string
+    testName?: string
+  }
+): Promise<void> {
   try {
     const auth = await getFirebaseAuth()
     const db = await getFirebaseDb()
@@ -62,7 +78,7 @@ export async function saveQuestion(question: any, coachingId: string, testId: st
       return
     }
 
-    // Save new question
+    // Save new question with metadata
     await addDoc(questionsRef, {
       userId: auth.currentUser.uid,
       questionId: question.id,
@@ -77,7 +93,13 @@ export async function saveQuestion(question: any, coachingId: string, testId: st
       section_id: question.section_id,
       positive_marks: question.positive_marks,
       negative_marks: question.negative_marks,
+      solution_text: question.solution_text || '',
       savedAt: Timestamp.now(),
+      // Optional metadata fields
+      ...(metadata?.instituteName && { instituteName: metadata.instituteName }),
+      ...(metadata?.subject && { subject: metadata.subject }),
+      ...(metadata?.sectionName && { sectionName: metadata.sectionName }),
+      ...(metadata?.testName && { testName: metadata.testName }),
     })
   } catch (error) {
     console.error('Error saving question:', error)
@@ -204,4 +226,77 @@ export function isSavedQuestionInCache(questionId: string, coachingId: string): 
   }
 
   return savedQuestionsCache.some(sq => sq.questionId === questionId && sq.coachingId === coachingId)
+}
+
+// Get all saved questions across all users (for shared/public page)
+export async function getAllSavedQuestions(): Promise<SavedQuestion[]> {
+  try {
+    const db = await getFirebaseDb()
+
+    const questionsRef = collection(db, COLLECTION_NAME)
+    const snapshot = await getDocs(questionsRef)
+    const allQuestions = snapshot.docs.map(doc => ({
+      ...doc.data(),
+      id: doc.id,
+      savedAt: doc.data().savedAt,
+    })) as SavedQuestion[]
+
+    return allQuestions.sort((a, b) => b.savedAt.toMillis() - a.savedAt.toMillis())
+  } catch (error) {
+    console.error('Error fetching all saved questions:', error)
+    return []
+  }
+}
+
+// Filter helper functions
+export function filterBySubject(questions: SavedQuestion[], subject: string): SavedQuestion[] {
+  if (!subject) return questions
+  return questions.filter(q => q.subject === subject || q.sectionName === subject || q.section_id === subject)
+}
+
+export function filterByInstitute(questions: SavedQuestion[], instituteName: string): SavedQuestion[] {
+  if (!instituteName) return questions
+  return questions.filter(q => q.instituteName === instituteName || q.coachingId === instituteName)
+}
+
+export function filterByMarks(questions: SavedQuestion[], marks: number): SavedQuestion[] {
+  if (!marks) return questions
+  return questions.filter(q => Number(q.positive_marks) === marks)
+}
+
+export function searchQuestions(questions: SavedQuestion[], searchTerm: string): SavedQuestion[] {
+  if (!searchTerm) return questions
+  const term = searchTerm.toLowerCase()
+  return questions.filter(q => 
+    q.question.toLowerCase().includes(term) ||
+    q.testName?.toLowerCase().includes(term) ||
+    q.sectionName?.toLowerCase().includes(term)
+  )
+}
+
+export function getUniqueSubjects(questions: SavedQuestion[]): string[] {
+  const subjects = new Set<string>()
+  questions.forEach(q => {
+    if (q.subject) subjects.add(q.subject)
+    if (q.sectionName) subjects.add(q.sectionName)
+    if (q.section_id) subjects.add(q.section_id)
+  })
+  return Array.from(subjects).sort()
+}
+
+export function getUniqueInstitutes(questions: SavedQuestion[]): string[] {
+  const institutes = new Set<string>()
+  questions.forEach(q => {
+    if (q.instituteName) institutes.add(q.instituteName)
+    if (q.coachingId) institutes.add(q.coachingId)
+  })
+  return Array.from(institutes).sort()
+}
+
+export function getUniqueMarks(questions: SavedQuestion[]): number[] {
+  const marks = new Set<number>()
+  questions.forEach(q => {
+    marks.add(Number(q.positive_marks))
+  })
+  return Array.from(marks).sort((a, b) => a - b)
 }

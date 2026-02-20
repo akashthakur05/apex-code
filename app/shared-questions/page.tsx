@@ -3,8 +3,7 @@
 import { ProtectedLayout } from '@/components/protected-layout'
 import { useState, useEffect } from 'react'
 import {
-  getSavedQuestions,
-  removeSavedQuestion,
+  getAllSavedQuestions,
   SavedQuestion,
   filterBySubject,
   filterByInstitute,
@@ -17,15 +16,14 @@ import {
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import HTMLRenderer from '@/components/html-renderer'
-import { ChevronLeft, Trash2, Loader2, Search, Filter, X } from 'lucide-react'
+import { ChevronLeft, Loader2, Search, Filter, X } from 'lucide-react'
 import Link from 'next/link'
 import { useToast } from '@/components/ui/use-toast'
 
-export default function SavedQuestionsPage() {
-  const [savedQuestions, setSavedQuestions] = useState<SavedQuestion[]>([])
+export default function SharedQuestionsPage() {
+  const [allQuestions, setAllQuestions] = useState<SavedQuestion[]>([])
   const [filteredQuestions, setFilteredQuestions] = useState<SavedQuestion[]>([])
   const [loading, setLoading] = useState(true)
-  const [deleting, setDeleting] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedSubject, setSelectedSubject] = useState('all')
   const [selectedInstitute, setSelectedInstitute] = useState('all')
@@ -36,12 +34,12 @@ export default function SavedQuestionsPage() {
   const { toast } = useToast()
 
   useEffect(() => {
-    loadSavedQuestions()
+    loadAllQuestions()
   }, [])
 
   // Apply filters whenever any filter changes
   useEffect(() => {
-    let result = [...savedQuestions]
+    let result = [...allQuestions]
 
     // Apply search
     if (searchTerm) {
@@ -64,23 +62,23 @@ export default function SavedQuestionsPage() {
     }
 
     setFilteredQuestions(result)
-  }, [savedQuestions, searchTerm, selectedSubject, selectedInstitute, selectedMarks])
+  }, [allQuestions, searchTerm, selectedSubject, selectedInstitute, selectedMarks])
 
-  const loadSavedQuestions = async () => {
+  const loadAllQuestions = async () => {
     try {
       setLoading(true)
-      const questions = await getSavedQuestions()
-      setSavedQuestions(questions)
+      const questions = await getAllSavedQuestions()
+      setAllQuestions(questions)
 
       // Extract filter options
       setSubjects(getUniqueSubjects(questions))
       setInstitutes(getUniqueInstitutes(questions))
       setMarks(getUniqueMarks(questions))
     } catch (error) {
-      console.error('Error loading saved questions:', error)
+      console.error('Error loading all questions:', error)
       toast({
         title: 'Error',
-        description: 'Failed to load saved questions',
+        description: 'Failed to load questions',
         variant: 'destructive',
       })
     } finally {
@@ -97,27 +95,6 @@ export default function SavedQuestionsPage() {
 
   const hasActiveFilters = searchTerm || selectedSubject !== 'all' || selectedInstitute !== 'all' || selectedMarks !== 'all'
 
-  const handleRemove = async (docId: string) => {
-    try {
-      setDeleting(docId)
-      await removeSavedQuestion(docId)
-      setSavedQuestions(prev => prev.filter(q => q.id !== docId))
-      toast({
-        title: 'Success',
-        description: 'Question removed',
-      })
-    } catch (error) {
-      console.error('Error removing question:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to remove question',
-        variant: 'destructive',
-      })
-    } finally {
-      setDeleting(null)
-    }
-  }
-
   return (
     <ProtectedLayout>
       <main className="min-h-screen bg-background">
@@ -128,9 +105,9 @@ export default function SavedQuestionsPage() {
               <ChevronLeft className="w-4 h-4" />
               Back Home
             </Link>
-            <h1 className="text-3xl font-bold">Saved Questions</h1>
+            <h1 className="text-3xl font-bold">Shared Questions</h1>
             <p className="text-sm text-muted-foreground mt-2">
-              {savedQuestions.length} questions saved across {groupedByCoaching.size} coaching institutes
+              Browse questions saved by all users in the community
             </p>
           </div>
         </div>
@@ -141,15 +118,12 @@ export default function SavedQuestionsPage() {
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
             </div>
-          ) : savedQuestions.length === 0 ? (
+          ) : allQuestions.length === 0 ? (
             <Card className="p-12 text-center">
-              <p className="text-lg text-muted-foreground mb-4">No saved questions yet</p>
+              <p className="text-lg text-muted-foreground mb-4">No shared questions yet</p>
               <p className="text-sm text-muted-foreground">
-                Save questions while taking tests to view them here. Use the save button next to questions.
+                Questions will appear here as users save them.
               </p>
-              <Link href="/">
-                <Button className="mt-6">Go to Tests</Button>
-              </Link>
             </Card>
           ) : (
             <div className="space-y-8">
@@ -240,7 +214,7 @@ export default function SavedQuestionsPage() {
 
               {/* Results Count */}
               <div className="text-sm text-muted-foreground">
-                Showing {filteredQuestions.length} of {savedQuestions.length} questions
+                Showing {filteredQuestions.length} of {allQuestions.length} questions
               </div>
 
               {/* Questions List */}
@@ -252,32 +226,18 @@ export default function SavedQuestionsPage() {
                 <div className="space-y-4">
                   {filteredQuestions.map((q) => (
                     <Card key={q.id} className="p-6">
-                      <div className="flex items-start justify-between gap-4 mb-4">
-                        <div className="flex-1 min-w-0">
-                          {/* Metadata Section */}
-                          <div className="text-xs text-muted-foreground mb-3 space-y-1">
-                            {q.instituteName && <p><strong>Institute:</strong> {q.instituteName}</p>}
-                            {q.testName && <p><strong>Test:</strong> {q.testName}</p>}
-                            {q.sectionName && <p><strong>Subject:</strong> {q.sectionName}</p>}
-                            <p><strong>Marks:</strong> +{q.positive_marks} / {q.negative_marks}</p>
-                            <p><strong>Saved:</strong> {new Date(q.savedAt.toMillis()).toLocaleDateString()}</p>
-                          </div>
-                          <div className="prose prose-sm dark:prose-invert max-w-none">
-                            <HTMLRenderer html={q.question} />
-                          </div>
+                      <div className="flex-1 min-w-0">
+                        {/* Metadata Section */}
+                        <div className="text-xs text-muted-foreground mb-3 space-y-1">
+                          {q.instituteName && <p><strong>Institute:</strong> {q.instituteName}</p>}
+                          {q.testName && <p><strong>Test:</strong> {q.testName}</p>}
+                          {q.sectionName && <p><strong>Subject:</strong> {q.sectionName}</p>}
+                          <p><strong>Marks:</strong> +{q.positive_marks} / {q.negative_marks}</p>
+                          <p><strong>Shared:</strong> {new Date(q.savedAt.toMillis()).toLocaleDateString()}</p>
                         </div>
-                        <button
-                          onClick={() => handleRemove(q.id)}
-                          disabled={deleting === q.id}
-                          className="flex-shrink-0 p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-950 rounded transition-colors disabled:opacity-50"
-                          aria-label="Delete question"
-                        >
-                          {deleting === q.id ? (
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                          ) : (
-                            <Trash2 className="w-5 h-5" />
-                          )}
-                        </button>
+                        <div className="prose prose-sm dark:prose-invert max-w-none">
+                          <HTMLRenderer html={q.question} />
+                        </div>
                       </div>
 
                       {/* Options */}

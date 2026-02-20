@@ -51,14 +51,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`font-sans antialiased`}>
-        <AuthProvider>
-          <div className="flex flex-col min-h-screen">
-            <main className="flex-1">
+        <div className="flex flex-col min-h-screen">
+          <main className="flex-1">
+            <AuthProvider>
               {children}
-            </main>
-            <Footer />
-          </div>
-        </AuthProvider>
+            </AuthProvider>
+          </main>
+          <Footer />
+        </div>
         <Analytics />
         <SpeedInsights/>
       </body>
