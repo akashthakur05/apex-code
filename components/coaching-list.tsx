@@ -5,7 +5,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { CheckCircle2, HelpCircle } from "lucide-react"
+import { CheckCircle2, HelpCircle, BookOpen } from "lucide-react"
 import { HelpButton } from "./help-button"
 import { LogoutButton } from "./logout-button"
 import { MobileNavbar } from "./mobile-navbar"
@@ -49,6 +49,12 @@ export default function CoachingList() {
             <h1 className="text-2xl md:text-3xl font-bold">Mock Test Series</h1>
             <div className="hidden md:flex items-center gap-2">
               <HelpButton />
+              <Link href="/saved-questions">
+                <Button variant="outline" className="gap-2">
+                  <BookOpen className="w-4 h-4" />
+                  Saved Questions
+                </Button>
+              </Link>
               <Link href="/progress">
                 <Button variant="outline" className="gap-2" data-tour="track-progress">
                   <CheckCircle2 className="w-4 h-4" />
