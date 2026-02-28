@@ -1,6 +1,6 @@
 'use client'
 
-import { SavedQuestion } from '@/lib/firebase-saved-questions'
+import { SavedQuestion, formatTimestamp } from '@/lib/firebase-saved-questions'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import HTMLRenderer from '@/components/html-renderer'
@@ -57,7 +57,7 @@ export function SavedQuestionsViewer({ questions, onRemove, deleting }: SavedQue
           <div>
             <p className="text-sm text-muted-foreground">Question {currentIndex + 1} of {questions.length}</p>
             <p className="text-xs text-muted-foreground mt-1">
-              Saved: {new Date(currentQuestion.savedAt.toMillis?.() || currentQuestion.savedAt).toLocaleDateString()}
+              Saved: {formatTimestamp(currentQuestion.savedAt)}
             </p>
           </div>
           <div className="text-xs bg-muted px-2 py-1 rounded">

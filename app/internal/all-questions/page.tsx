@@ -2,7 +2,7 @@
 
 import { ProtectedLayout } from '@/components/protected-layout'
 import { useState, useEffect } from 'react'
-import { getAllSavedQuestionsForAdmin, SavedQuestion } from '@/lib/firebase-saved-questions'
+import { getAllSavedQuestionsForAdmin, SavedQuestion, formatTimestamp } from '@/lib/firebase-saved-questions'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import HTMLRenderer from '@/components/html-renderer'
@@ -112,7 +112,7 @@ export default function AdminAllQuestionsPage() {
                       <div className="text-xs text-muted-foreground space-y-1 mb-3">
                         <p>User ID: {q.userId}</p>
                         <p>Coaching: {q.coachingId} | Test: {q.testId}</p>
-                        <p>Saved: {new Date(q.savedAt.toMillis?.() || q.savedAt).toLocaleDateString()}</p>
+                        <p>Saved: {formatTimestamp(q.savedAt)}</p>
                         <p>Marks: +{q.positive_marks} / {q.negative_marks}</p>
                       </div>
                       <HTMLRenderer html={q.question} />

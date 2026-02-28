@@ -2,7 +2,7 @@
 
 import { ProtectedLayout } from '@/components/protected-layout'
 import { useState, useEffect } from 'react'
-import { getSavedQuestions, removeSavedQuestion, SavedQuestion } from '@/lib/firebase-saved-questions'
+import { getSavedQuestions, removeSavedQuestion, SavedQuestion, formatTimestamp } from '@/lib/firebase-saved-questions'
 import { SavedQuestionsViewer } from '@/components/saved-questions-viewer'
 import { SavedQuestionsFilters } from '@/components/saved-questions-filters'
 import { Card } from '@/components/ui/card'
@@ -205,7 +205,7 @@ export default function SavedQuestionsPage() {
                         <div className="flex items-start justify-between gap-4 mb-4">
                           <div className="flex-1">
                             <div className="text-xs text-muted-foreground mb-3 space-y-1">
-                              <p>Saved: {new Date(q.savedAt.toMillis()).toLocaleDateString()}</p>
+                              <p>Saved: {formatTimestamp(q.savedAt)}</p>
                               <p>Marks: +{q.positive_marks} / {q.negative_marks}</p>
                             </div>
                             <HTMLRenderer html={q.question} />
