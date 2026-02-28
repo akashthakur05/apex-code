@@ -49,6 +49,12 @@ export default function CoachingList() {
             <h1 className="text-2xl md:text-3xl font-bold">Mock Test Series</h1>
             <div className="hidden md:flex items-center gap-2">
               <HelpButton />
+              <Link href="/saved-questions">
+                <Button variant="outline" className="gap-2">
+                  <HelpCircle className="w-4 h-4" />
+                  Saved Questions
+                </Button>
+              </Link>
               <Link href="/progress">
                 <Button variant="outline" className="gap-2" data-tour="track-progress">
                   <CheckCircle2 className="w-4 h-4" />
