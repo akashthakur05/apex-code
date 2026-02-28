@@ -106,3 +106,17 @@ export interface CoachingInstitute {
 export interface SectionMap {
   [key: string]: string
 }
+
+// Subject Source interface for MiniMock nested subject flow
+export interface SubjectSource {
+  subject: string
+  label: string
+  test_series_id: string
+  count?: number
+}
+
+// Extended CoachingInstitute with MiniMock support
+export interface CoachingInstituteWithMiniMock extends CoachingInstitute {
+  type?: 'normal' | 'minimock'
+  subjectSources?: SubjectSource[]
+}

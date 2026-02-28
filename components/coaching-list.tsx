@@ -9,6 +9,7 @@ import { CheckCircle2, HelpCircle } from "lucide-react"
 import { HelpButton } from "./help-button"
 import { LogoutButton } from "./logout-button"
 import { MobileNavbar } from "./mobile-navbar"
+import { isMiniMockSource } from "@/lib/source-utils"
 
 type Institute = {
   id: string
@@ -84,28 +85,36 @@ export default function CoachingList() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {data.map((institute) => (
-              <Link key={institute.id} href={`/coaching/${institute.id}`}>
-                <Card className="h-full hover:scale-105 transition">
-                  <div className="p-6 flex flex-col items-center gap-4 text-center">
-                    <div className="relative w-24 h-24 bg-muted rounded-lg">
-                      <Image
-                        src={institute.logo || "/placeholder.svg"}
-                        alt={institute.name}
-                        fill
-                        className="object-cover"
-                      />
+            {data.map((institute) => {
+              const href = isMiniMockSource(institute)
+                ? `/coaching/${institute.id}/subject`
+                : `/coaching/${institute.id}`
+              
+              return (
+                <Link key={institute.id} href={href}>
+                  <Card className="h-full hover:scale-105 transition">
+                    <div className="p-6 flex flex-col items-center gap-4 text-center">
+                      <div className="relative w-24 h-24 bg-muted rounded-lg">
+                        <Image
+                          src={institute.logo || "/placeholder.svg"}
+                          alt={institute.name}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                      <h2 className="text-2xl font-bold">
+                        {institute.name}
+                      </h2>
+                      <p className="text-sm text-muted-foreground">
+                        {isMiniMockSource(institute)
+                          ? `${(institute as any).subjectSources?.length || 0} subjects available`
+                          : `${institute.tests.length} test series available`}
+                      </p>
                     </div>
-                    <h2 className="text-2xl font-bold">
-                      {institute.name}
-                    </h2>
-                    <p className="text-sm text-muted-foreground">
-                      {institute.tests.length}  Test Series Available
-                    </p>
-                  </div>
-                </Card>
-              </Link>
-            ))}
+                  </Card>
+                </Link>
+              )
+            })}
           </div>
         )}
       </div>

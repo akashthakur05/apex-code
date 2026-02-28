@@ -12,9 +12,10 @@ import { MobileNavbar } from './mobile-navbar'
 
 interface Props {
   coaching: CoachingInstitute
+  subject?: string
 }
 
-export default function TestList({ coaching }: Props) {
+export default function TestList({ coaching, subject }: Props) {
   const [completedTests, setCompletedTests] = useState<Set<string>>(new Set())
 
   useEffect(() => {
@@ -33,9 +34,12 @@ export default function TestList({ coaching }: Props) {
       <div className="sticky top-0 z-10 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-4 gap-4">
-            <Link href="/" className="inline-flex items-center gap-2 text-primary hover:underline">
+            <Link 
+              href={subject ? `/coaching/${coaching.id}/subject` : "/"} 
+              className="inline-flex items-center gap-2 text-primary hover:underline"
+            >
               <ChevronLeft className="w-4 h-4" />
-              Back to Coaching
+              {subject ? 'Back to Subjects' : 'Back to Coaching'}
             </Link>
             <div className="flex items-center gap-2">
               <Link href="/progress" className="hidden md:inline">
@@ -51,9 +55,10 @@ export default function TestList({ coaching }: Props) {
           </div>
           <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-foreground">
             {coaching.name}
+            {subject && <span className="text-primary"> - {subject}</span>}
           </h1>
           <p className="text-sm md:text-base text-muted-foreground mt-2">
-            {coaching.tests.length} test series available
+            {coaching.tests.length} test{coaching.tests.length !== 1 ? 's' : ''} available
           </p>
         </div>
       </div>
