@@ -43,32 +43,28 @@ export default function SubjectSelection({
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {subjects.map((subject) => (
               <Link
-                key={subject.subject}
-                href={`/coaching/${coachingId}/subject/${encodeURIComponent(subject.subject)}`}
+                key={subject.subject_id || subject.subject}
+                href={`/coaching/${coachingId}/subject/${encodeURIComponent(subject.subject_id || subject.subject)}`}
               >
                 <Card className="p-6 cursor-pointer hover:shadow-lg transition-shadow h-full flex flex-col">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="p-2 bg-primary/10 rounded-lg">
-                      <Book className="w-5 h-5 text-primary" />
+                    <div className="p-2 bg-primary/10 rounded-lg flex-shrink-0">
+                      {subject.logo ? (
+                        <img src={subject.logo} alt={subject.label} className="w-8 h-8 object-contain" />
+                      ) : (
+                        <Book className="w-5 h-5 text-primary" />
+                      )}
                     </div>
                     <h3 className="font-semibold text-lg line-clamp-2">{subject.label}</h3>
                   </div>
-                  <p className="text-xs text-muted-foreground mb-4 flex-grow">
-                    {subject.count && subject.count > 0
+                  <p className="text-sm text-muted-foreground mb-4 flex-grow">
+                    {subject.count !== undefined && subject.count > 0
                       ? `${subject.count} test${subject.count !== 1 ? 's' : ''} available`
-                      : 'No tests available'}
+                      : 'Tests coming soon'}
                   </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                    onClick={(e) => {
-                      // The parent Link already handles navigation
-                      e.preventDefault()
-                    }}
-                  >
+                  <div className="w-full inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3 py-2">
                     Explore Tests
-                  </Button>
+                  </div>
                 </Card>
               </Link>
             ))}

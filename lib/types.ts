@@ -75,18 +75,18 @@ export interface TestTitle {
   remaining_attempt: string
   exam_theme: string
   language: string,
-  enable_random_test_generator:any,
-  terms_url?:any
+  enable_random_test_generator: any,
+  terms_url?: any
   positive_marks?: string
   negative_marks?: string
   type?: any
-  option_count?:any
-  solution_url?:any
-  solution_pdf?:any
-  solution_pdf2?:any
-  remainingtime?:any
-  enable_negative_marks_for_fifth_option?:any
-  all_question_compulsary?:any
+  option_count?: any
+  solution_url?: any
+  solution_pdf?: any
+  solution_pdf2?: any
+  remainingtime?: any
+  enable_negative_marks_for_fifth_option?: any
+  all_question_compulsary?: any
 
 }
 
@@ -96,9 +96,9 @@ export interface CoachingInstitute {
   logo: string
   test_series_id: string
   tests: TestTitle[]
-  repositry_url:string
-  folder_name:string
-  sectionMap:{[key:string]:string}
+  repositry_url: string
+  folder_name: string
+  sectionMap: { [key: string]: string }
 }
 
 
@@ -110,9 +110,11 @@ export interface SectionMap {
 // Subject Source interface for MiniMock nested subject flow
 export interface SubjectSource {
   subject: string
+  subject_id: string
   label: string
   test_series_id: string
   count?: number
+  logo?: string
 }
 
 // Extended CoachingInstitute with MiniMock support

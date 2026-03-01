@@ -23,12 +23,18 @@ async function loadCoachingData() {
 export async function generateStaticParams() {
   const coachingInstitutes = await loadCoachingData() as any;
 
-  return coachingInstitutes.flatMap((coaching: any) =>
+  const params = coachingInstitutes.flatMap((coaching: any) =>
     coaching.tests.map((test: any) => ({
-      coachingId: coaching.id,
-      testId: test.id,
+      coachingId: String(coaching.id),
+      testId: String(test.id),
     }))
   )
+
+  if (params.length === 0) {
+    return [{ coachingId: "empty", testId: "empty" }]
+  }
+
+  return params
 }
 
 /* ======================================================

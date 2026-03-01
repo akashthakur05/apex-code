@@ -20,7 +20,7 @@ const MOCK_TS_PATH = path.join(LIB_DIR, "mock-data.ts");
 console.log(MOCK_TS_PATH)
 
 
-const sortById= (arr = []) =>
+const sortById = (arr = []) =>
   [...arr].sort((a, b) => {
     const ai = Number(a.id);
     const bi = Number(b.id);
@@ -116,8 +116,71 @@ async function updateMockTs(source, tests) {
 
 async function processSource(source) {
   log("INFO", `Fetching tests → ${source.name}`);
+
+  if (source.type === "minimock") {
+    const subjectsRes = await fetchJSON(source.url, source.headers);
+    if (!subjectsRes.data || !subjectsRes.data.length) {
+      return log("WARN", `No subjects → ${source.name}`);
+    }
+
+    const testSeriesId = new URL(source.url).searchParams.get("testseries_id") || "621";
+    let allTests = [];
+    let subjectSources = [];
+
+    const base = path.join(DATA_DIR, source.folder_name);
+    await fs.promises.mkdir(base, { recursive: true });
+
+    for (const subject of subjectsRes.data) {
+      if (!subject.subjectid || subject.subjectid === "-1") continue;
+
+      log("INFO", `Fetching Minimock subject → ${subject.subject_name}`);
+      const baseUrl = new URL(source.url).origin;
+      const subjectUrl = `${baseUrl}/get/test_titlev2?testseriesid=${testSeriesId}&subject_id=${subject.subjectid}&userid=1010983&search=&start=-1`;
+
+      const testData = await fetchJSON(subjectUrl, source.headers).catch(e => {
+        log("WARN", `Failed to fetch subject ${subject.subject_name}: ` + e.message);
+        return { test_titles: [] };
+      });
+
+      if (!testData.test_titles) continue;
+
+      const subjectNameDecoded = subject.subject_name.trim();
+
+      subjectSources.push({
+        subject: subjectNameDecoded,
+        test_series_id: String(testSeriesId),
+        subject_id: String(subject.subjectid),
+        logo: subject.subject_logo || "",
+        count: testData.test_titles.length
+      });
+
+      for (const t of testData.test_titles) {
+        if (!t.id || !t.test_questions_url) continue;
+
+        t.subject = subjectNameDecoded;
+        allTests.push(t);
+
+        const testFile = path.join(base, `${t.id}.json`);
+
+        if (!fs.existsSync(testFile)) {
+          const questions = await fetchJSON(t.test_questions_url, source.headers).catch(e => {
+            log("WARN", `Failed to fetch test ${t.id}: ` + e.message);
+            return [];
+          });
+          await write(testFile, stringify(questions));
+          log("FETCH", `Test ${t.id} (${subjectNameDecoded})`);
+        }
+      }
+    }
+
+    source.subjectSources = subjectSources;
+    await updateDataJson(source, allTests);
+    log("DONE", source.name);
+    return;
+  }
+
   const data = await fetchJSON(source.url, source.headers);
-  
+
 
   if (!Array.isArray(data.test_titles) || !data.test_titles.length) {
     return log("WARN", `No tests → ${source.name}`);
@@ -191,9 +254,14 @@ async function updateDataJson(source, tests) {
     data.push(institute);
   }
 
+  if (source.type === "minimock") {
+    institute.type = "minimock";
+    institute.subjectSources = source.subjectSources || [];
+  }
+
   institute.tests = sortById(
-  mergeTests(institute.tests, tests)
-);
+    mergeTests(institute.tests, tests)
+  );
   // Not Removing due to backward compatibility with coaching-list.tsx which is using test length to show number of tests available for each institute
   await write(DATA_JSON_PATH, stringify(data));
   await write(PUBLIC_DATA_JSON_PATH, stringify(data));

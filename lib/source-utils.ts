@@ -20,14 +20,14 @@ export function getSubjectSources(coaching: CoachingInstitute | CoachingInstitut
 }
 
 /**
- * Get a specific subject source by subject name
+ * Get a specific subject source by subject name or id
  */
 export function getSubjectSource(
   coaching: CoachingInstitute | CoachingInstituteWithMiniMock,
-  subject: string
+  subjectIdOrName: string
 ): SubjectSource | null {
   const sources = getSubjectSources(coaching)
-  return sources.find(s => s.subject === subject) || null
+  return sources.find(s => s.subject_id === subjectIdOrName || s.subject === subjectIdOrName) || null
 }
 
 /**
@@ -79,17 +79,15 @@ export function getCoachingTestSeriesId(
  */
 export function getTestsBySubject(
   coaching: CoachingInstitute | CoachingInstituteWithMiniMock,
-  subject: string
+  subjectIdOrName: string
 ): typeof coaching.tests {
   if (!isMiniMockSource(coaching)) {
     return coaching.tests
   }
 
-  const testSeriesId = getSubjectTestSeriesId(coaching, subject)
-  if (!testSeriesId) {
-    return []
-  }
+  const subjectSource = getSubjectSource(coaching, subjectIdOrName)
+  const exactSubjectName = subjectSource?.subject || subjectIdOrName
 
-  // Filter tests that belong to this subject's test series
-  return coaching.tests.filter(test => test.test_series_id === testSeriesId)
+  // Filter tests that belong to this subject
+  return coaching.tests.filter((test: any) => test.subject === exactSubjectName)
 }

@@ -23,7 +23,7 @@ export async function generateStaticParams() {
       subjects.forEach((subject: any) => {
         params.push({
           coachingId: String(coaching.id),
-          subject: String(subject.subject),
+          subject: encodeURIComponent(subject.subject_id || subject.subject), // Ensure Next.js static engine pre-builds the encoded URI directly.
         })
       })
     }
@@ -42,11 +42,15 @@ export async function generateMetadata({ params }: Props) {
   const { coachingId, subject } = await params
   const coachingInstitutes = await loadCoachingData() as any
   const coaching = coachingInstitutes.find((c: any) => c.id === coachingId)
-  const decodedSubject = decodeURIComponent(subject)
+  const decodedSubjectId = decodeURIComponent(subject)
+
+  const subjects = getSubjectSources(coaching)
+  const subjectObj = subjects.find(s => s.subject_id === decodedSubjectId || s.subject === decodedSubjectId)
+  const displaySubjectName = subjectObj?.subject || decodedSubjectId
 
   return {
-    title: `${coaching?.name ?? 'Coaching'} - ${decodedSubject}`,
-    description: `View MiniMock tests for ${decodedSubject} from ${coaching?.name ?? 'coaching institute'}`,
+    title: `${coaching?.name ?? 'Coaching'} - ${displaySubjectName}`,
+    description: `View MiniMock tests for ${displaySubjectName} from ${coaching?.name ?? 'coaching institute'}`,
   }
 }
 
@@ -54,7 +58,7 @@ export default async function SubjectTestPage({ params }: Props) {
   const { coachingId, subject } = await params
   const coachingInstitutes = await loadCoachingData() as any
   const coaching = coachingInstitutes.find((c: any) => c.id === coachingId)
-  const decodedSubject = decodeURIComponent(subject)
+  const decodedSubjectId = decodeURIComponent(subject)
 
   if (!coaching || !coachingId) {
     redirect('/')
@@ -67,14 +71,16 @@ export default async function SubjectTestPage({ params }: Props) {
 
   // Verify the subject exists
   const subjects = getSubjectSources(coaching)
-  const subjectExists = subjects.some(s => s.subject === decodedSubject)
+  const subjectObj = subjects.find(s => s.subject_id === decodedSubjectId || s.subject === decodedSubjectId)
 
-  if (!subjectExists) {
+  if (!subjectObj) {
     notFound()
   }
 
+  const displaySubjectName = subjectObj.subject
+
   // Filter tests for this subject
-  const testsForSubject = getTestsBySubject(coaching, decodedSubject)
+  const testsForSubject = getTestsBySubject(coaching, decodedSubjectId)
 
   // Create a modified coaching object with only the relevant tests
   const coachingWithSubjectTests = {
@@ -87,7 +93,7 @@ export default async function SubjectTestPage({ params }: Props) {
       <main className="min-h-screen bg-background">
         <TestList
           coaching={coachingWithSubjectTests}
-          subject={decodedSubject}
+          subject={displaySubjectName}
         />
       </main>
     </ProtectedLayout>

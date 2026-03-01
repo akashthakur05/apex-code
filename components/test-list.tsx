@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { CoachingInstitute } from '@/lib/types'
+import { CoachingInstitute, CoachingInstituteWithMiniMock } from '@/lib/types'
 import Link from 'next/link'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -11,7 +11,7 @@ import { isTestComplete } from '@/lib/bookmark-storage'
 import { MobileNavbar } from './mobile-navbar'
 
 interface Props {
-  coaching: CoachingInstitute
+  coaching: CoachingInstitute | CoachingInstituteWithMiniMock
   subject?: string
 }
 
@@ -34,8 +34,8 @@ export default function TestList({ coaching, subject }: Props) {
       <div className="sticky top-0 z-10 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-4 gap-4">
-            <Link 
-              href={subject ? `/coaching/${coaching.id}/subject` : "/"} 
+            <Link
+              href={subject ? `/coaching/${coaching.id}/subject` : "/"}
               className="inline-flex items-center gap-2 text-primary hover:underline"
             >
               <ChevronLeft className="w-4 h-4" />
@@ -64,7 +64,7 @@ export default function TestList({ coaching, subject }: Props) {
       </div>
 
       {/* Section Filter */}
-      <SectionFilter coachingId={coaching.id} />
+      {(!('type' in coaching) || coaching.type !== 'minimock') && <SectionFilter coachingId={coaching.id} />}
 
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -73,11 +73,10 @@ export default function TestList({ coaching, subject }: Props) {
               key={test.id}
               href={`/coaching/${coaching.id}/test/${test.id}`}
             >
-              <Card className={`h-full cursor-pointer transition-all hover:shadow-lg hover:scale-105 p-6 relative ${
-                completedTests.has(test.id) 
-                  ? 'border-2 border-green-500 bg-green-50/50 dark:bg-green-950/20' 
-                  : ''
-              }`}>
+              <Card className={`h-full cursor-pointer transition-all hover:shadow-lg hover:scale-105 p-6 relative ${completedTests.has(test.id)
+                ? 'border-2 border-green-500 bg-green-50/50 dark:bg-green-950/20'
+                : ''
+                }`}>
                 {/* Completed indicator */}
                 {completedTests.has(test.id) && (
                   <div className="absolute top-4 right-4 flex items-center gap-1 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
