@@ -1,6 +1,7 @@
 import { ProtectedLayout } from '@/components/protected-layout'
 import TestList from '@/components/test-list'
 import { notFound, redirect } from 'next/navigation'
+import { isMiniMockSource } from '@/lib/source-utils'
 
 interface Props {
   params: Promise<{ coachingId: string }>
@@ -64,6 +65,11 @@ export default async function CoachingPage({ params }: Props) {
 
   if (!coaching || !coachingId) {
     redirect('/')
+  }
+
+  // If this is a minimock source, redirect to subject selection
+  if (isMiniMockSource(coaching)) {
+    redirect(`/coaching/${coachingId}/subject`)
   }
 
   return (

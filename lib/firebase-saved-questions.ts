@@ -32,6 +32,12 @@ export interface SavedQuestion {
   positive_marks: number
   negative_marks: number
   savedAt: Timestamp
+  // Optional fields for enhanced filtering and organization
+  coachingName?: string
+  subject?: string
+  testDate?: string
+  examType?: string
+  tags?: string[]
 }
 
 const COLLECTION_NAME = 'saved_questions'
@@ -204,4 +210,49 @@ export function isSavedQuestionInCache(questionId: string, coachingId: string): 
   }
 
   return savedQuestionsCache.some(sq => sq.questionId === questionId && sq.coachingId === coachingId)
+}
+
+// Admin function to get all questions across all users
+export async function getAllSavedQuestionsForAdmin(): Promise<SavedQuestion[]> {
+  try {
+    const db = await getFirebaseDb()
+    const questionsRef = collection(db, COLLECTION_NAME)
+    const snapshot = await getDocs(questionsRef)
+    
+    const allQuestions = snapshot.docs.map(doc => ({
+      ...doc.data(),
+      id: doc.id,
+      savedAt: doc.data().savedAt,
+    })) as SavedQuestion[]
+
+    return allQuestions.sort((a, b) => {
+      const aTime = typeof a.savedAt === 'object' && a.savedAt && 'toMillis' in a.savedAt 
+        ? (a.savedAt as any).toMillis()
+        : 0
+      const bTime = typeof b.savedAt === 'object' && b.savedAt && 'toMillis' in b.savedAt
+        ? (b.savedAt as any).toMillis()
+        : 0
+      return bTime - aTime
+    })
+  } catch (error) {
+    console.error('Error fetching all saved questions:', error)
+    throw error
+  }
+}
+
+// Helper function to format Firestore Timestamp
+export function formatTimestamp(timestamp: any): string {
+  if (!timestamp) return 'Unknown'
+  
+  // Check if it's a Firestore Timestamp object
+  if (typeof timestamp === 'object' && 'toDate' in timestamp) {
+    return timestamp.toDate().toLocaleDateString()
+  }
+  
+  // Fallback for Date objects or timestamps
+  try {
+    return new Date(timestamp as any).toLocaleDateString()
+  } catch {
+    return 'Invalid Date'
+  }
 }

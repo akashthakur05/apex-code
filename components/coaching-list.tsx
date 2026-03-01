@@ -9,14 +9,38 @@ import { CheckCircle2, HelpCircle } from "lucide-react"
 import { HelpButton } from "./help-button"
 import { LogoutButton } from "./logout-button"
 import { MobileNavbar } from "./mobile-navbar"
+import { isMiniMockSource } from "@/lib/source-utils"
+import { CoachingInstitute, CoachingInstituteWithMiniMock } from "@/lib/types"
 
-type Institute = {
-  id: string
-  name: string
-  logo?: string
-  tests: any[]
-}
+// // type Institute = {
+// //   id: string
+// //   name: string
+// //   logo?: string
+// //   tests: any[]
+// // }
 
+// type BaseInstitute = {
+//   id: string
+//   name: string
+//   logo?: string
+// }
+
+// type NormalInstitute = BaseInstitute & {
+//   tests: any[]
+// }
+
+// type MiniMockInstitute = BaseInstitute & {
+//   test_series_id: string
+//   repositry_url: string
+//   folder_name: string
+//   sectionMap: Record<string, any>
+//   subjectSources?: any[]
+// }
+
+// type Institute = NormalInstitute | MiniMockInstitute
+export type Institute =
+  | CoachingInstitute
+  | CoachingInstituteWithMiniMock
 export default function CoachingList() {
   const [data, setData] = useState<Institute[]>([])
   const [loading, setLoading] = useState(true)
@@ -49,6 +73,12 @@ export default function CoachingList() {
             <h1 className="text-2xl md:text-3xl font-bold">Mock Test Series</h1>
             <div className="hidden md:flex items-center gap-2">
               <HelpButton />
+              <Link href="/saved-questions">
+                <Button variant="outline" className="gap-2">
+                  <HelpCircle className="w-4 h-4" />
+                  Saved Questions
+                </Button>
+              </Link>
               <Link href="/progress">
                 <Button variant="outline" className="gap-2" data-tour="track-progress">
                   <CheckCircle2 className="w-4 h-4" />
@@ -78,28 +108,36 @@ export default function CoachingList() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {data.map((institute) => (
-              <Link key={institute.id} href={`/coaching/${institute.id}`}>
-                <Card className="h-full hover:scale-105 transition">
-                  <div className="p-6 flex flex-col items-center gap-4 text-center">
-                    <div className="relative w-24 h-24 bg-muted rounded-lg">
-                      <Image
-                        src={institute.logo || "/placeholder.svg"}
-                        alt={institute.name}
-                        fill
-                        className="object-cover"
-                      />
+            {data.map((institute) => {
+              const href = isMiniMockSource(institute)
+                ? `/coaching/${institute.id}/subject`
+                : `/coaching/${institute.id}`
+              
+              return (
+                <Link key={institute.id} href={href}>
+                  <Card className="h-full hover:scale-105 transition">
+                    <div className="p-6 flex flex-col items-center gap-4 text-center">
+                      <div className="relative w-24 h-24 bg-muted rounded-lg">
+                        <Image
+                          src={institute.logo || "/placeholder.svg"}
+                          alt={institute.name}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                      <h2 className="text-2xl font-bold">
+                        {institute.name}
+                      </h2>
+                      <p className="text-sm text-muted-foreground">
+                        {isMiniMockSource(institute)
+                          ? `${(institute as any).subjectSources?.length || 0} subjects available`
+                          : `${institute.tests.length} test series available`}
+                      </p>
                     </div>
-                    <h2 className="text-2xl font-bold">
-                      {institute.name}
-                    </h2>
-                    <p className="text-sm text-muted-foreground">
-                      {institute.tests.length}  Test Series Available
-                    </p>
-                  </div>
-                </Card>
-              </Link>
-            ))}
+                  </Card>
+                </Link>
+              )
+            })}
           </div>
         )}
       </div>

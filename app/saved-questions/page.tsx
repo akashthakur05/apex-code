@@ -2,22 +2,28 @@
 
 import { ProtectedLayout } from '@/components/protected-layout'
 import { useState, useEffect } from 'react'
-import { getSavedQuestions, removeSavedQuestion, SavedQuestion } from '@/lib/firebase-saved-questions'
+import { getSavedQuestions, removeSavedQuestion, SavedQuestion, formatTimestamp } from '@/lib/firebase-saved-questions'
+import { SavedQuestionsViewer } from '@/components/saved-questions-viewer'
+import { SavedQuestionsFilters } from '@/components/saved-questions-filters'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import HTMLRenderer from '@/components/html-renderer'
-import { ChevronLeft, Trash2, Loader2 } from 'lucide-react'
+import { ChevronLeft, Trash2, Loader2, Grid3x3, ListIcon } from 'lucide-react'
 import Link from 'next/link'
 import { useToast } from '@/components/ui/use-toast'
 
 export default function SavedQuestionsPage() {
   const [savedQuestions, setSavedQuestions] = useState<SavedQuestion[]>([])
+  const [filteredQuestions, setFilteredQuestions] = useState<SavedQuestion[]>([])
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState<string | null>(null)
   const [selectedFilter, setSelectedFilter] = useState<string>('all')
+  const [mounted, setMounted] = useState(false)
+  const [viewMode, setViewMode] = useState<'list' | 'viewer'>('list')
   const { toast } = useToast()
 
   useEffect(() => {
+    setMounted(true)
     loadSavedQuestions()
   }, [])
 
@@ -26,6 +32,7 @@ export default function SavedQuestionsPage() {
       setLoading(true)
       const questions = await getSavedQuestions()
       setSavedQuestions(questions)
+      setFilteredQuestions(questions)
     } catch (error) {
       console.error('Error loading saved questions:', error)
       toast({
@@ -43,6 +50,7 @@ export default function SavedQuestionsPage() {
       setDeleting(docId)
       await removeSavedQuestion(docId)
       setSavedQuestions(prev => prev.filter(q => q.id !== docId))
+      setFilteredQuestions(prev => prev.filter(q => q.id !== docId))
       toast({
         title: 'Success',
         description: 'Question removed',
@@ -71,6 +79,23 @@ export default function SavedQuestionsPage() {
     ? Array.from(groupedByCoaching.entries())
     : Array.from(groupedByCoaching.entries()).filter(([coachingId]) => coachingId === selectedFilter)
 
+  if (!mounted) {
+    return (
+      <ProtectedLayout>
+        <main className="min-h-screen bg-background">
+          <div className="sticky top-0 z-10 border-b bg-card/95 backdrop-blur">
+            <div className="max-w-4xl mx-auto px-4 py-6">
+              <h1 className="text-3xl font-bold">Saved Questions</h1>
+            </div>
+          </div>
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          </div>
+        </main>
+      </ProtectedLayout>
+    )
+  }
+
   return (
     <ProtectedLayout>
       <main className="min-h-screen bg-background">
@@ -81,10 +106,36 @@ export default function SavedQuestionsPage() {
               <ChevronLeft className="w-4 h-4" />
               Back Home
             </Link>
-            <h1 className="text-3xl font-bold">Saved Questions</h1>
-            <p className="text-sm text-muted-foreground mt-2">
-              {savedQuestions.length} questions saved across {groupedByCoaching.size} coaching institutes
-            </p>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h1 className="text-3xl font-bold">Saved Questions</h1>
+                <p className="text-sm text-muted-foreground mt-2">
+                  {savedQuestions.length} questions saved across {groupedByCoaching.size} coaching institutes
+                </p>
+              </div>
+              {savedQuestions.length > 0 && (
+                <div className="flex gap-2">
+                  <Button
+                    variant={viewMode === 'list' ? 'default' : 'outline'}
+                    onClick={() => setViewMode('list')}
+                    size="sm"
+                    className="gap-2"
+                  >
+                    <ListIcon className="w-4 h-4" />
+                    List
+                  </Button>
+                  <Button
+                    variant={viewMode === 'viewer' ? 'default' : 'outline'}
+                    onClick={() => setViewMode('viewer')}
+                    size="sm"
+                    className="gap-2"
+                  >
+                    <Grid3x3 className="w-4 h-4" />
+                    Viewer
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -104,9 +155,24 @@ export default function SavedQuestionsPage() {
                 <Button className="mt-6">Go to Tests</Button>
               </Link>
             </Card>
+          ) : viewMode === 'viewer' ? (
+            // Viewer Mode
+            <SavedQuestionsViewer 
+              questions={savedQuestions}
+              onRemove={handleRemove}
+              deleting={deleting}
+            />
           ) : (
             <div className="space-y-8">
-              {/* Filter Dropdown - Optional */}
+              {/* New Filtering Component */}
+              {savedQuestions.length > 0 && (
+                <SavedQuestionsFilters 
+                  questions={savedQuestions}
+                  onFiltersChange={setFilteredQuestions}
+                />
+              )}
+
+              {/* Legacy Filter Dropdown - Optional */}
               {groupedByCoaching.size > 1 && (
                 <div className="flex gap-2">
                   <Button
@@ -139,7 +205,7 @@ export default function SavedQuestionsPage() {
                         <div className="flex items-start justify-between gap-4 mb-4">
                           <div className="flex-1">
                             <div className="text-xs text-muted-foreground mb-3 space-y-1">
-                              <p>Saved: {new Date(q.savedAt.toMillis()).toLocaleDateString()}</p>
+                              <p>Saved: {formatTimestamp(q.savedAt)}</p>
                               <p>Marks: +{q.positive_marks} / {q.negative_marks}</p>
                             </div>
                             <HTMLRenderer html={q.question} />

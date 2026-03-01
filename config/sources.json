@@ -63,7 +63,7 @@
             "5": "Hindi",
             "1": "Numerical & Mental Ability Test",
             "3": "Mental Aptitude/Intelligence/Reasoning"
-        }   
+        }
     },
     {
         "name": "RWAUPSIPAIDFULL",
@@ -76,14 +76,14 @@
             "source": "website"
         },
         "enabled": true,
-           "sectionMap": {
+        "sectionMap": {
             "215": "Basic Law/Constitution/General Knowledge",
             "213": "Hindi",
             "222": "Numerical & Mental Ability Test",
             "223": "Mental Aptitude/Intelligence/Reasoning"
         }
     },
-     {
+    {
         "name": "SUPERCLIMAX",
         "folder_name": "SUPERCLIMAX",
         "logo": "/superclimax.jpeg",
@@ -94,11 +94,24 @@
             "source": "website"
         },
         "enabled": true,
-           "sectionMap": {
+        "sectionMap": {
             "217": "MATHS",
             "280": "Reasoning",
             "214": "GK/GS",
             "215": "Hindi"
         }
+    },
+    {
+        "name": "RWAUPSIMINIMOCK",
+        "folder_name": "RWAUPSIMINIMOCK",
+        "logo": "/rwa.jpeg",
+        "type": "minimock",
+        "url": "https://rozgarapinew.teachx.in/get/testseries_subjects?testseries_id=621",
+        "headers": {
+            "auth-key": "appxapi",
+            "authorization": "TOKEN",
+            "source": "website"
+        },
+        "enabled": true
     }
 ]
