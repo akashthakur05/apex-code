@@ -113,5 +113,18 @@
             "source": "website"
         },
         "enabled": true
+    },
+    {
+        "name": "RWAUPSIMINIMOCKPAID",
+        "folder_name": "RWAUPSIMINIMOCKPAID",
+        "logo": "/rwa.jpeg",
+        "type": "minimock",
+        "url": "https://rozgarapinew.teachx.in/get/testseries_subjects?testseries_id=542",
+        "headers": {
+            "auth-key": "appxapi",
+            "authorization": "TOKEN",
+            "source": "website"
+        },
+        "enabled": true
     }
 ]
