@@ -22,12 +22,18 @@ export async function generateStaticParams() {
       const subjects = getSubjectSources(coaching)
       subjects.forEach((subject: any) => {
         params.push({
-          coachingId: coaching.id,
-          subject: subject.subject,
+          coachingId: String(coaching.id),
+          subject: String(subject.subject),
         })
       })
     }
   })
+
+  // Next.js static export fails if a dynamic route returns an empty array.
+  // We return a dummy fallback that will just 404 naturally.
+  if (params.length === 0) {
+    return [{ coachingId: "empty", subject: "empty" }]
+  }
 
   return params
 }
@@ -79,8 +85,8 @@ export default async function SubjectTestPage({ params }: Props) {
   return (
     <ProtectedLayout>
       <main className="min-h-screen bg-background">
-        <TestList 
-          coaching={coachingWithSubjectTests} 
+        <TestList
+          coaching={coachingWithSubjectTests}
           subject={decodedSubject}
         />
       </main>

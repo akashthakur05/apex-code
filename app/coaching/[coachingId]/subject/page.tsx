@@ -14,13 +14,19 @@ async function loadCoachingData() {
 
 export async function generateStaticParams() {
   const data = await loadCoachingData() as any
-  
+
   // Generate params for minimock sources only
-  return data
+  const params = data
     .filter((coaching: any) => coaching.type === 'minimock' && coaching.subjectSources)
     .map((coaching: any) => ({
-      coachingId: coaching.id,
+      coachingId: String(coaching.id),
     }))
+
+  if (params.length === 0) {
+    return [{ coachingId: "empty" }]
+  }
+
+  return params
 }
 
 export async function generateMetadata({ params }: Props) {

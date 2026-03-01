@@ -10,14 +10,37 @@ import { HelpButton } from "./help-button"
 import { LogoutButton } from "./logout-button"
 import { MobileNavbar } from "./mobile-navbar"
 import { isMiniMockSource } from "@/lib/source-utils"
+import { CoachingInstitute, CoachingInstituteWithMiniMock } from "@/lib/types"
 
-type Institute = {
-  id: string
-  name: string
-  logo?: string
-  tests: any[]
-}
+// // type Institute = {
+// //   id: string
+// //   name: string
+// //   logo?: string
+// //   tests: any[]
+// // }
 
+// type BaseInstitute = {
+//   id: string
+//   name: string
+//   logo?: string
+// }
+
+// type NormalInstitute = BaseInstitute & {
+//   tests: any[]
+// }
+
+// type MiniMockInstitute = BaseInstitute & {
+//   test_series_id: string
+//   repositry_url: string
+//   folder_name: string
+//   sectionMap: Record<string, any>
+//   subjectSources?: any[]
+// }
+
+// type Institute = NormalInstitute | MiniMockInstitute
+export type Institute =
+  | CoachingInstitute
+  | CoachingInstituteWithMiniMock
 export default function CoachingList() {
   const [data, setData] = useState<Institute[]>([])
   const [loading, setLoading] = useState(true)
