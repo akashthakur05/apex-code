@@ -56,6 +56,7 @@ export default async function SubjectIndexPage({ params }: Props) {
 
   const subjects = getSubjectSources(coaching)
 
+
   return (
     <ProtectedLayout>
       <SubjectSelection coaching={coaching} subjects={subjects} coachingId={coachingId} />

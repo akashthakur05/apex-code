@@ -123,7 +123,7 @@ async function processSource(source) {
       return log("WARN", `No subjects → ${source.name}`);
     }
 
-    const testSeriesId = new URL(source.url).searchParams.get("testseries_id") || "621";
+    const testSeriesId = new URL(source.url).searchParams.get("testseries_id");
     let allTests = [];
     let subjectSources = [];
 

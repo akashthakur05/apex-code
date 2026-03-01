@@ -50,12 +50,12 @@ export default function SubjectSelection({
                   <div className="flex items-center gap-3 mb-3">
                     <div className="p-2 bg-primary/10 rounded-lg flex-shrink-0">
                       {subject.logo ? (
-                        <img src={subject.logo} alt={subject.label} className="w-8 h-8 object-contain" />
+                        <img src={subject.logo} alt={subject.label || subject.subject} className="w-8 h-8 object-contain" />
                       ) : (
                         <Book className="w-5 h-5 text-primary" />
                       )}
                     </div>
-                    <h3 className="font-semibold text-lg line-clamp-2">{subject.label}</h3>
+                    <h3 className="font-semibold text-lg line-clamp-2">{subject.label || subject.subject}</h3>
                   </div>
                   <p className="text-sm text-muted-foreground mb-4 flex-grow">
                     {subject.count !== undefined && subject.count > 0

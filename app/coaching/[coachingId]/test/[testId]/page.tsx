@@ -95,9 +95,6 @@ export default async function TestPage({ params }: Props) {
     coaching.folder_name,
     testId
   )
-
-  console.log('Loaded questions for', coaching.name, test.title, questions ? '✅' : '❌')
-
   return (
 
     <ProtectedLayout>

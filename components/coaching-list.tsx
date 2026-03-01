@@ -52,7 +52,6 @@ export default function CoachingList() {
         const response = await fetch('data.json')
         if (!response.ok) throw new Error('Failed to load data')
         const jsonData = await response.json()
-        console.log('Loaded coaching data:', jsonData)
         setData(jsonData)
       } catch (err) {
         console.error('Error loading coaching data:', err)
@@ -112,7 +111,7 @@ export default function CoachingList() {
               const href = isMiniMockSource(institute)
                 ? `/coaching/${institute.id}/subject`
                 : `/coaching/${institute.id}`
-              
+
               return (
                 <Link key={institute.id} href={href}>
                   <Card className="h-full hover:scale-105 transition">
