@@ -112,7 +112,13 @@
             "authorization": "TOKEN",
             "source": "website"
         },
-        "enabled": true
+        "enabled": true,
+        "sectionMap": {
+            "215": "Basic Law/Constitution/General Knowledge",
+            "213": "Hindi",
+            "222": "Numerical & Mental Ability Test",
+            "223": "Mental Aptitude/Intelligence/Reasoning"
+        }
     },
     {
         "name": "RWAUPSIMINIMOCKPAID",
@@ -125,6 +131,12 @@
             "authorization": "TOKEN",
             "source": "website"
         },
-        "enabled": true
+        "enabled": true,
+        "sectionMap": {
+            "215": "Basic Law/Constitution/General Knowledge",
+            "213": "Hindi",
+            "222": "Numerical & Mental Ability Test",
+            "223": "Mental Aptitude/Intelligence/Reasoning"
+        }
     }
 ]

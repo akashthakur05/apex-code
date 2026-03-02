@@ -64,7 +64,7 @@ export default function TestList({ coaching, subject }: Props) {
       </div>
 
       {/* Section Filter */}
-      {(!('type' in coaching) || coaching.type !== 'minimock') && <SectionFilter coachingId={coaching.id} />}
+      <SectionFilter coachingId={coaching.id} />
 
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

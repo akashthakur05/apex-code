@@ -128,7 +128,10 @@ async function processSource(source) {
     let subjectSources = [];
 
     const base = path.join(DATA_DIR, source.folder_name);
-    await fs.promises.mkdir(base, { recursive: true });
+    const sectionDir = path.join(base, "Section");
+    await fs.promises.mkdir(sectionDir, { recursive: true });
+
+    const sections = {};
 
     for (const subject of subjectsRes.data) {
       if (!subject.subjectid || subject.subjectid === "-1") continue;
@@ -169,8 +172,33 @@ async function processSource(source) {
           });
           await write(testFile, stringify(questions));
           log("FETCH", `Test ${t.id} (${subjectNameDecoded})`);
+
+          // Aggregate questions by section_id for mini-mock
+          for (const q of questions) {
+            const sid = String(q.section_id ?? 0);
+            sections[sid] ??= new Map();
+            sections[sid].set(q.id, q);
+          }
+        } else {
+          // If test file exists, still need to aggregate sections
+          const questions = JSON.parse(await read(testFile));
+          for (const q of questions) {
+            const sid = String(q.section_id ?? 0);
+            sections[sid] ??= new Map();
+            sections[sid].set(q.id, q);
+          }
         }
       }
+    }
+
+    // Write section files for mini-mock
+    for (const [sid, map] of Object.entries(sections)) {
+      const f = path.join(sectionDir, `${sid}.json`);
+      const old = fs.existsSync(f) ? JSON.parse(await read(f)) : [];
+      const merged = new Map(old.map(q => [q.id, q]));
+      for (const [id, q] of map) merged.set(id, q);
+      await write(f, stringify([...merged.values()]));
+      log("WRITE", `Section ${sid} (MiniMock)`);
     }
 
     source.subjectSources = subjectSources;
@@ -252,6 +280,11 @@ async function updateDataJson(source, tests) {
       tests: []
     };
     data.push(institute);
+  }
+
+  // Update sectionMap for existing institutes if provided in source
+  if (source.sectionMap) {
+    institute.sectionMap = source.sectionMap;
   }
 
   if (source.type === "minimock") {
