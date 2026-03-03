@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import HTMLRenderer from '@/components/html-renderer'
 import { ChevronLeft, ChevronRight, Trash2, Loader2 } from 'lucide-react'
 import { useState } from 'react'
+import { useExamKeyboard } from "@/hooks/useExamKeyboard"
 
 interface SavedQuestionsViewerProps {
   questions: SavedQuestion[]
@@ -48,7 +49,12 @@ export function SavedQuestionsViewer({ questions, onRemove, deleting }: SavedQue
       setIsRemoving(false)
     }
   }
-
+  useExamKeyboard({
+    onNext: handleNext,
+    onPrev: handlePrevious,
+    onSelectOption: () => {}, // No options to select in viewer
+    isOptionLocked: false,
+  })
   return (
     <div className="space-y-6">
       {/* Viewer Header */}
